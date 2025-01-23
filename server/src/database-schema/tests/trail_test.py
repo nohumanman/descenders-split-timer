@@ -12,6 +12,16 @@ CREATE TABLE Trail (
 
 class TestTrail(unittest.TestCase):
 
+    def reset_database(self):
+        drop_all = "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(drop_all)
+        with open('schema.sql') as f:
+            schema = f.read()
+            cur.execute(schema)
+        conn.commit()
+
     def connect(self):
         import psycopg2
         self.conn = psycopg2.connect(
@@ -21,8 +31,10 @@ class TestTrail(unittest.TestCase):
             password = "postgres",
             port = 5432
         )
+        return self.conn
 
     def test_insert(self):
+        self.reset_database()
         self.connect()
         cur = self.conn.cursor()
         cur.execute("INSERT INTO Trail (world_name, trail_name) VALUES ('world1', 'trail1')")
