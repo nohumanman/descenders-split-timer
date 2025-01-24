@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import AsyncMock
-from src.trail_timer import TrailTimer
+from trail_timer import TrailTimer
 import asyncio
 import time
 
