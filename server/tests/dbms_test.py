@@ -1,7 +1,22 @@
 '''
 Module to test DBMS
-'''
 
+Note: A database must be running on localhost:5432 with the following credentials:
+    database = "postgres"
+    user = postgres
+    password = postgres
+    host = localhost
+    port = 5432
+
+The schema is automatically reset before each test, so the database must be empty.
+
+To run the tests, run the following command:
+    python -m unittest tests.dbms_test
+
+Start database with:
+    cd server/src/database-schema/
+    docker-compose up -d
+'''
 import unittest
 import time
 from src.dbms import DBMS
@@ -252,22 +267,22 @@ class TestDbms(unittest.IsolatedAsyncioTestCase):
             {
                 "place": 1,
                 "starting_speed": 8.34,
-                "name": "test_player",
-                "bike": 1,
-                "version": "1.34",
-                "verified": True,
-                "time_id": 1,
-                "time": 9,
-            },
-            {
-                "place": 2,
-                "starting_speed": 8.34,
                 "name": "test_player2",
                 "bike": 1,
                 "version": "1.34",
                 "verified": True,
                 "time_id": 2,
                 "time": 7,
+            },
+            {
+                "place": 2,
+                "starting_speed": 8.34,
+                "name": "test_player",
+                "bike": 1,
+                "version": "1.34",
+                "verified": True,
+                "time_id": 1,
+                "time": 9,
             }
         ])
 
@@ -296,9 +311,11 @@ class TestDbms(unittest.IsolatedAsyncioTestCase):
         cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (2, '76561198000000000', 0, 1, 8.34, '1.34', 1, FALSE)")
         cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 1, 2)")
         cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (1, TRUE)")
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (2, TRUE)")
         conn.commit()
         leaderboard = await dbms_instance.get_leaderboard("Test Trail", "Test World")
         # only returns one because the other is the same id
+        self.assertEqual(len(leaderboard), 1)
         self.assertEqual(leaderboard, [
             {
                 "place": 1,
@@ -311,3 +328,190 @@ class TestDbms(unittest.IsolatedAsyncioTestCase):
                 "time": 1,
             }
         ])
+    
+    async def test_add_discord_user(self):
+        dbms_instance = await self.get_dbms_instance()
+        await dbms_instance.add_discord_user(123456789, "76561198000000000", "test_discord")
+        self.assertEqual((await dbms_instance.get_discord_user(123456789)).discord_name, "test_discord")
+    
+    async def test_authorise_discord_user(self):
+        dbms_instance = await self.get_dbms_instance()
+        await dbms_instance.add_discord_user(123456789, "76561198000000000", "test_discord")
+        await dbms_instance.authorise_discord_user(123456789)
+        self.assertEqual((await dbms_instance.get_discord_user(123456789)).steam_id, "76561198000000000")
+        self.assertEqual((await dbms_instance.get_discord_user(123456789)).authorised, True)
+
+    @unittest.skip("not yet implemented")
+    async def test_get_personal_best_checkpoint_times(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 4, 4)")
+        conn.commit()
+        personal_best_checkpoint_times = await dbms_instance.get_personal_best_checkpoint_times("Test Trail", "Test World", "76561198000000000")
+        self.assertEqual(personal_best_checkpoint_times, [1, 2, 3, 4])
+    
+    @unittest.skip("not yet implemented")
+    async def test_get_personal_best_checkpoint_times_with_multiple_times(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 4, 4)")
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (2, '76561198000000000', 0, 1, 8.34, '1.34', 1, FALSE)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 4, 5)")
+        conn.commit()
+        personal_best_checkpoint_times = await dbms_instance.get_personal_best_checkpoint_times("Test Trail", "Test World", "76561198000000000")
+        self.assertEqual(personal_best_checkpoint_times, [1, 2, 3, 4])
+    
+    @unittest.skip("not yet implemented")
+    async def test_get_personal_best_checkpoint_times_with_unverified_time(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 4, 4)")
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (1, FALSE)")
+        conn.commit()
+        personal_best_checkpoint_times = await dbms_instance.get_personal_best_checkpoint_times("Test Trail", "Test World", "76561198000000000")
+        self.assertEqual(personal_best_checkpoint_times, [])
+    
+    @unittest.skip("not yet implemented")
+    async def test_get_personal_best_checkpoint_times_with_deleted_time(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, TRUE)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 4, 4)")
+        conn.commit()
+        personal_best_checkpoint_times = await dbms_instance.get_personal_best_checkpoint_times("Test Trail", "Test World", "76561198000000000")
+        self.assertEqual(personal_best_checkpoint_times, [])
+    
+    @unittest.skip("not yet implemented")
+    async def test_get_global_best_checkpoint_times(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        # insert trail
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        # insert player
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        # insert time
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        # insert checkpoint times
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 4, 4)")
+        # insert verification
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (1, TRUE)")
+        conn.commit()
+        global_best_checkpoint_times = await dbms_instance.get_global_best_checkpoint_times("Test Trail", "Test World")
+        self.assertEqual(global_best_checkpoint_times, [1, 2, 3, 4])
+    
+    @unittest.skip("not yet implemented")
+    async def test_get_global_best_checkpoint_times_with_multiple_times(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        # insert trail
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        # insert player
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        # insert time
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        # insert checkpoint times
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (1, 4, 4)")
+        # insert verification
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (1, TRUE)")
+        # insert player
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000001', 'test_player2')")
+        # insert time
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (2, '76561198000000001', 0, 1, 8.34, '1.34', 0, FALSE)")
+        # insert checkpoint times
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 1, 1)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 2, 2)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 3, 3)")
+        cur.execute("INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (2, 4, 5)")
+        # insert verification
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (2, TRUE)")
+        conn.commit()
+        global_best_checkpoint_times = await dbms_instance.get_global_best_checkpoint_times("Test Trail", "Test World")
+        self.assertEqual(global_best_checkpoint_times, [1, 2, 3, 4])
+    
+    @unittest.skip("not yet implemented")
+    async def test_get_recent_times(self):
+        pass
+
+    async def test_get_trail_average_starting_speed(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        # insert trail
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        # insert player
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        # insert time
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        # insert verification
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (1, TRUE)")
+        conn.commit()
+        trail_average_starting_speed = await dbms_instance.get_trail_average_starting_speed("Test Trail", "Test World")
+        self.assertEqual(trail_average_starting_speed, 8.34)
+    
+    async def test_get_trail_average_starting_speed_with_multiple_times(self):
+        dbms_instance = await self.get_dbms_instance()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        # insert trail
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        # insert player
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        # insert time
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        # insert verification
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (1, TRUE)")
+        # insert player
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000001', 'test_player2')")
+        # insert time
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (2, '76561198000000001', 0, 1, 8.34, '1.34', 0, FALSE)")
+        # insert verification
+        cur.execute("INSERT INTO verifications (player_time_id, verified) VALUES (2, TRUE)")
+        conn.commit()
+        trail_average_starting_speed = await dbms_instance.get_trail_average_starting_speed("Test Trail", "Test World")
+        self.assertEqual(trail_average_starting_speed, 8.34)

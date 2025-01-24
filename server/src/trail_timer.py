@@ -108,10 +108,10 @@ class TrailTimer():
             self.__checkpoints.append(checkpoint_hash)
             self.timer_info.times.append(float(client_time))
 
-            wr = await self.network_player.dbms.get_fastest_split_times(
+            wr = await self.network_player.dbms.get_global_best_checkpoint_times(
                 self.trail_name
             )
-            pb = await self.network_player.dbms.get_personal_fastest_split_times(
+            pb = await self.network_player.dbms.get_personal_best_checkpoint_times(
                 self.trail_name, self.network_player.info.steam_id
             )
 
@@ -176,16 +176,16 @@ class TrailTimer():
     async def can_end(self) -> bool:
         """ Check if the data is valid to be able to end the timer """
         errors = {
-            "ERR002: Too many checkpoints":
-                lambda: len(self.timer_info.times) > self.timer_info.total_checkpoints-1,
-            "ERR003: Not enough checkpoints":
-                lambda: len(self.timer_info.times) < self.timer_info.total_checkpoints-1,
-            "ERR004: No times logged":
-                lambda: len(self.timer_info.times) == 0,
+            "ERR006: Timer not started":
+                lambda: not self.timer_info.started,
             "ERR005: Time is negative":
                 lambda: self.timer_info.times[len(self.timer_info.times)-1] < 0,
-            "ERR006: Didn't start timer":
-                lambda: not self.timer_info.started,
+            "ERR002: Too many checkpoints":
+                lambda: len(self.timer_info.times) > self.timer_info.total_checkpoints-1,
+            "ERR004: No times logged":
+                lambda: len(self.timer_info.times) == 0,
+            "ERR003: Not enough checkpoints":
+                lambda: len(self.timer_info.times) < self.timer_info.total_checkpoints-1,
             "ERR007: Client time did not match server time":
                 lambda: not(
                     (
@@ -223,12 +223,11 @@ class TrailTimer():
             self.timer_info.times,
             self.trail_name,
             self.network_player.info.world_name,
-            self.network_player.info.bike_type,
+            self.network_player.info.bike_id,
             self.timer_info.starting_speed,
             self.network_player.info.version,
-            self.timer_info.auto_verify and can_end[0],
-            not can_end[0],
-            spectated_by
+            "",
+            self.timer_info.auto_verify and can_end[0]
         )
         # ask client to upload replay
         await self.network_player.send(f"UPLOAD_REPLAY|{time_id}")
@@ -276,11 +275,11 @@ class TrailTimer():
 
         async def discord_notif():
             # send the time to the discord server if it is a new fastest time
-            global_fastest = await self.network_player.dbms.get_fastest_split_times(self.trail_name)
+            global_fastest = await self.network_player.dbms.get_global_best_checkpoint_times(self.trail_name)
             if client_time < global_fastest[len(global_fastest)-1] and self.timer_info.auto_verify and can_end[0]:
                 await self.__new_fastest_time(secs_str)
             # send the time to the discord server if it is a new fastest time
-            our_fastest = await self.network_player.dbms.get_personal_fastest_split_times(
+            our_fastest = await self.network_player.dbms.get_personal_best_checkpoint_times(
                 self.trail_name,
                 self.network_player.info.steam_id
             )

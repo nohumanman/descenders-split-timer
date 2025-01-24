@@ -12,7 +12,7 @@ class TestConcurrency(unittest.TestCase):
         conn = self.connect()
         cur = conn.cursor()
         cur.execute(drop_all)
-        with open('schema.sql') as f:
+        with open('./server/src/database-schema/schema.sql') as f:
             schema = f.read()
             cur.execute(schema)
         conn.commit()
@@ -34,7 +34,7 @@ class TestConcurrency(unittest.TestCase):
         def concurrency():
             conn = self.connect()
             cur = conn.cursor()
-            cur.execute("INSERT INTO Trail (world_name, trail_name) VALUES ('world', 'trail')")
+            cur.execute("INSERT INTO trails (world_name, trail_name) VALUES ('world', 'trail')")
             conn.commit()
             conn.close()
 
@@ -51,7 +51,7 @@ class TestConcurrency(unittest.TestCase):
         # check the number of records
         conn = self.connect()
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM Trail")
+        cur.execute("SELECT COUNT(*) FROM trails")
         count = cur.fetchone()[0]
         self.assertEqual(count, 220)
         conn.close()
@@ -62,7 +62,7 @@ class TestConcurrency(unittest.TestCase):
         import threading
         conn = self.connect()
         cur = conn.cursor()
-        concurrency_sql = "INSERT INTO Trail (world_name, trail_name) VALUES ('world', 'trail')"
+        concurrency_sql = "INSERT INTO trails (world_name, trail_name) VALUES ('world', 'trail')"
         # apply the same sql statement concurrently
         threads = []
         for i in range(200):
@@ -73,7 +73,7 @@ class TestConcurrency(unittest.TestCase):
             t.join()
         conn.commit()
         # check the number of records
-        cur.execute("SELECT COUNT(*) FROM Trail")
+        cur.execute("SELECT COUNT(*) FROM trails")
         count = cur.fetchone()[0]
         self.assertEqual(count, 200)
         conn.close()

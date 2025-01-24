@@ -36,7 +36,7 @@ CREATE TABLE website_users (
     "discord_id" BIGINT UNIQUE,
     "steam_id" TEXT,
     "discord_name" TEXT,
-    "email" TEXT,
+    "authorised" BOOLEAN,
     PRIMARY KEY ("discord_id")
 );
 

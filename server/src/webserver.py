@@ -323,7 +323,7 @@ class Webserver():
             # see if the time is faster than the player's current fastest verified time
             faster_than_current_fastest = False
             try:
-                current_fastest = (await self.dbms.get_personal_fastest_split_times(details[7], details[0]))[-1]
+                current_fastest = (await self.dbms.get_personal_best_checkpoint_times(details[7], details[0]))[-1]
                 if current_fastest is not None and details[6] <= current_fastest:
                     faster_than_current_fastest = True
             except IndexError:
@@ -671,4 +671,4 @@ class Webserver():
         if lim_str is None:
             return jsonify({})
         lim = int(lim_str)
-        return jsonify({"times": await self.dbms.get_all_times(lim)})
+        return jsonify({"times": await self.dbms.get_recent_times(lim)})

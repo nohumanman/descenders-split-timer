@@ -75,6 +75,7 @@ class Player:
     avatar_src: str
     steam_id: str
     bike_type: str
+    bike_id: int
     world_name: str
     last_trick: str
     reputation: int
@@ -107,7 +108,8 @@ class UnitySocket():
             bike_type="", world_name="",
             last_trick="", reputation=0,
             version="OUTDATED", time_started=time.time(),
-            spectating="", spectating_id = ""
+            spectating="", spectating_id = "",
+            bike_id=0
         )
 
     async def log_line(self, line: str):

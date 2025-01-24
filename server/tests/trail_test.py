@@ -17,7 +17,7 @@ class TestTrail(unittest.TestCase):
         conn = self.connect()
         cur = conn.cursor()
         cur.execute(drop_all)
-        with open('schema.sql') as f:
+        with open('./server/src/database-schema/schema.sql') as f:
             schema = f.read()
             cur.execute(schema)
         conn.commit()
@@ -37,13 +37,13 @@ class TestTrail(unittest.TestCase):
         self.reset_database()
         self.connect()
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO Trail (world_name, trail_name) VALUES ('world1', 'trail1')")
+        cur.execute("INSERT INTO trails (world_name, trail_name) VALUES ('world1', 'trail1')")
         self.conn.commit()
         self.conn.close()
         # check if record was added
         self.conn = self.connect()
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM Trail")
+        cur.execute("SELECT * FROM trails")
         rows = cur.fetchall()
         self.assertEqual(len(rows), 1)
         self.conn.close()

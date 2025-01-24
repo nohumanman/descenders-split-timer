@@ -57,14 +57,21 @@ class Verification(Base):
     verifier_id = Column(BigInteger)
     verification_timestamp = Column(Float)
     verified = Column(Boolean)
-    
+
+class WebsiteUser(Base):
+    __tablename__ = 'website_users'
+
+    discord_id = Column(BigInteger, primary_key=True)
+    steam_id = Column(String)
+    discord_name = Column(String)
+    authorised = Column(Boolean)
 
 # Database Management System
 class DBMS:
     """ A simple Database Management System (DBMS) class for managing data using SQLAlchemy. """
 
     def __init__(self, db_url: str):
-        self.engine = create_async_engine(db_url, echo=True)
+        self.engine = create_async_engine(db_url, echo=False)
         self.async_session = sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -132,15 +139,15 @@ class DBMS:
 
     async def submit_time(
         self,
-        steam_id,
-        checkpoint_times,
-        trail_name,
-        current_world,
+        steam_id: str,
+        checkpoint_times: list[float],
+        trail_name: str,
+        current_world: str,
         bike_id : int,
         starting_speed: float,
-        version,
-        game_version,
-        auto_verify=True
+        version: str,
+        game_version: str,
+        auto_verify: bool = True
     ):
         # print all from BikeType
         async with self.async_session() as session:
@@ -288,6 +295,65 @@ class DBMS:
             )
             session.add(verification)
             await session.commit()
+
+    async def authorise_discord_user(self, discord_id):
+        async with self.async_session() as session:
+            user = await session.get(WebsiteUser, discord_id)
+            user.authorised = True
+            await session.commit()
+    
+    async def get_discord_user(self, discord_id):
+        async with self.async_session() as session:
+            user = await session.get(WebsiteUser, discord_id)
+            return user
+    
+    async def add_discord_user(self, discord_id, steam_id, discord_name):
+        async with self.async_session() as session:
+            user = WebsiteUser(
+                discord_id=discord_id,
+                steam_id=steam_id,
+                discord_name=discord_name,
+                authorised=False
+            )
+            session.add(user)
+            await session.commit()
+
+    async def get_personal_best_checkpoint_times(self, steam_id, trail_name, world_name):
+        pass
+
+    async def get_global_best_checkpoint_times(self, trail_name, world_name):
+        pass
+
+    async def get_recent_times(self, limit=10):
+        return [{
+            "avatar_src":"no.jpg",
+            "bike_type":"downhill",
+            "ignore":0,
+            "starting_speed":3.266331,
+            "steam_id":"76561199085553376",
+            "steam_name":"Lawrence_R",
+            "time_id":"-6495871202898393399",
+            "timestamp":1737747771.6579456,
+            "total_checkpoints":4,
+            "total_time":43.7205352783203,
+            "trail_name":"Fort William 4x",
+            "verified":1,
+            "version":"0.3.01",
+            "world_name":"Fort William 4x (race)-0.48"
+        }]
+
+    async def get_trail_average_starting_speed(self, trail_name, world_name):
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(PlayerTime.starting_speed)
+                .join(Trail, Trail.trail_id == PlayerTime.trail_id)
+                .where(
+                    Trail.trail_name == trail_name,
+                    Trail.world_name == world_name
+                )
+            )
+            speeds = result.scalars().all()
+            return sum(speeds) / len(speeds) if speeds else None
 
     async def close(self):
         await self.engine.dispose()
