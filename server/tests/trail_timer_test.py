@@ -96,7 +96,7 @@ class TestTrailTimer(unittest.IsolatedAsyncioTestCase):
         self.timer._TrailTimer__boundaries = []
         self.timer.timer_info.total_checkpoints = 5
         self.timer.timer_info.times = [-1]
-        self.timer.timer_info.started = False
+        self.timer.timer_info.started = True
         result = await self.timer.can_end()
         self.assertFalse(result[0])
         self.assertEqual(result[1], "ERR005: Time is negative")

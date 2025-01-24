@@ -178,12 +178,12 @@ class TrailTimer():
         errors = {
             "ERR006: Timer not started":
                 lambda: not self.timer_info.started,
+            "ERR004: No times logged":
+                lambda: len(self.timer_info.times) == 0,
             "ERR005: Time is negative":
                 lambda: self.timer_info.times[len(self.timer_info.times)-1] < 0,
             "ERR002: Too many checkpoints":
                 lambda: len(self.timer_info.times) > self.timer_info.total_checkpoints-1,
-            "ERR004: No times logged":
-                lambda: len(self.timer_info.times) == 0,
             "ERR003: Not enough checkpoints":
                 lambda: len(self.timer_info.times) < self.timer_info.total_checkpoints-1,
             "ERR007: Client time did not match server time":

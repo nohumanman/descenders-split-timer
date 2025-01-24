@@ -68,7 +68,6 @@ class TestDbms(unittest.IsolatedAsyncioTestCase):
         cur = conn.cursor()
         cur.execute("SELECT * FROM players WHERE steam_id = '76561198000000000'")
         result = cur.fetchone()
-        print("XQC", result)
         conn.close()
         self.assertEqual(result[1], "test_player2")
 

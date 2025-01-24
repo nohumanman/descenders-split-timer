@@ -96,10 +96,8 @@ class DBMS:
             if player:
                 player.steam_name = steam_name
             else:
-                print("CREATING NEW PLAYER")
                 player = Player(steam_id=steam_id, steam_name=steam_name)
                 session.add(player)
-            print("QTS", player)
             await session.commit()
 
     async def get_player(self, steam_id):
@@ -149,11 +147,6 @@ class DBMS:
         game_version: str,
         auto_verify: bool = True
     ):
-        # print all from BikeType
-        async with self.async_session() as session:
-            result = await session.execute(select(BikeType))
-            print("BIKES", result.scalars().all())
-
         player_time_id = hash(
             str(checkpoint_times[-1]) + str(steam_id) + str(time.time())
         ) # TODO: This hash function may have collisions
