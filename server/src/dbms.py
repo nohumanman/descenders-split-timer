@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, BigInteger, REAL
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, BigInteger, REAL, TIMESTAMP
+from sqlalchemy.sql.expression import func
 from sqlalchemy.future import select
 from datetime import datetime, timedelta
 import time
@@ -48,6 +49,15 @@ class Trail(Base):
     trail_id = Column(Integer, primary_key=True)
     trail_name = Column(String)
     world_name = Column(String)
+
+class Verification(Base):
+    __tablename__ = 'verifications'
+
+    player_time_id = Column(BigInteger, primary_key=True)
+    verifier_id = Column(BigInteger)
+    verification_timestamp = Column(Float)
+    verified = Column(Boolean)
+    
 
 # Database Management System
 class DBMS:
@@ -129,7 +139,8 @@ class DBMS:
         bike_id : int,
         starting_speed: float,
         version,
-        game_version
+        game_version,
+        auto_verify=True
     ):
         # print all from BikeType
         async with self.async_session() as session:
@@ -140,6 +151,8 @@ class DBMS:
             str(checkpoint_times[-1]) + str(steam_id) + str(time.time())
         ) # TODO: This hash function may have collisions
         await self.get_player(steam_id) # Ensure player exists
+        if auto_verify:
+            await self.submit_time_verification(player_time_id, 0, True)
         async with self.async_session() as session:
             new_time = PlayerTime(
                 player_time_id=player_time_id,
@@ -178,27 +191,68 @@ class DBMS:
                 for trail in trails
             ]
 
-    async def get_leaderboard(self, trail_name, num=10):
+    async def get_leaderboard(self, trail_name, world_name, num=10, verified_only=True):
         async with self.async_session() as session:
-            result = await session.execute(
-                select(PlayerTime)
-                .filter_by(trail_id=await self.get_trail_id(trail_name, "Test World"), deleted=False)
-                .order_by(PlayerTime.submission_timestamp.asc())
-                .limit(num)
+            ranked_times_subquery = (
+                select(
+                    PlayerTime,
+                    CheckpointTime.checkpoint_time,
+                    func.row_number()
+                    .over(
+                        partition_by=PlayerTime.steam_id,  # Partition by steam_id to rank within each steam_id group
+                        order_by=func.min(CheckpointTime.checkpoint_time).asc()  # Order by the fastest time
+                    )
+                    .label("row_rank")
+                )
+                .join(
+                    CheckpointTime, CheckpointTime.player_time_id == PlayerTime.player_time_id
+                )
+                .join(
+                    Player,
+                    Player.steam_id == PlayerTime.steam_id
+                )
+                .where(
+                    PlayerTime.trail_id == await self.get_trail_id(trail_name, world_name),
+                    # Add additional conditions as needed:
+                    # PlayerTime.verified == True,  # Uncomment if verification check is required
+                    PlayerTime.deleted == False  # Ensure time is not deleted
+                )
+                .group_by(
+                    PlayerTime.player_time_id,  # Group by player_time_id to calculate min checkpoint_time
+                    PlayerTime.steam_id,
+                    CheckpointTime.checkpoint_time
+                )
+                .subquery()
             )
-            times = result.scalars().all()
+
+            # Main query: Select only the rows where row_rank = 1
+            result = await session.execute(
+                select(
+                    ranked_times_subquery.c.starting_speed,
+                    ranked_times_subquery.c.steam_id,
+                    ranked_times_subquery.c.bike_id,
+                    ranked_times_subquery.c.version,
+                    ranked_times_subquery.c.checkpoint_time,
+                    ranked_times_subquery.c.player_time_id
+                )
+                .where(ranked_times_subquery.c.row_rank == 1)  # Only take the top-ranked row for each steam_id
+                .order_by(ranked_times_subquery.c.checkpoint_time.asc())  # Order by fastest time overall
+                .limit(num)  # Limit the results if needed
+            )
+
+            times = result.all()
             return [
                 {
                     "place": i + 1,
-                    "starting_speed": time.starting_speed,
-                    "name": (await session.get(Player, time.steam_id)).steam_name,
-                    "bike": time.bike_id,
-                    "version": time.version,
-                    #"verified": time.verified,
-                    "time_id": time.player_time_id,
-                    "time": time.submission_timestamp,
+                    "starting_speed": starting_speed,
+                    "name": (await session.get(Player, steam_id)).steam_name,
+                    "bike": bike_id,
+                    "version": version,
+                    "verified":True,# verified,
+                    "time_id": player_time_id,
+                    "time": checkpoint_time,
                 }
-                for i, time in enumerate(times)
+                for i, (starting_speed, steam_id, bike_id, version, checkpoint_time, player_time_id) in enumerate(times)
             ]
     
     async def delete_time(self, time_id):
@@ -219,7 +273,21 @@ class DBMS:
                 "time": time.submission_timestamp,
             }
 
-    
+    async def submit_time_verification(
+            self,
+            time_id: int,
+            verifier_id: int,
+            verified: bool
+        ):
+        async with self.async_session() as session:
+            verification = Verification(
+                verifier_id=verifier_id,
+                verification_timestamp=time.time(),
+                verified=verified,
+                player_time_id=time_id
+            )
+            session.add(verification)
+            await session.commit()
 
     async def close(self):
         await self.engine.dispose()

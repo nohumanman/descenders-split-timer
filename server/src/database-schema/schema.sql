@@ -15,7 +15,7 @@ INSERT INTO bike_types ("bike_id", "bike_name") VALUES (2, 'hardtail');
 CREATE TABLE player_times (
     "player_time_id" BIGINT, -- Unique ID for each time
     "steam_id" TEXT, -- Steam ID of the player
-    "submission_timestamp" REAL, -- Time the time was submitted
+    "submission_timestamp" FLOAT, -- Time the time was submitted
     "trail_id" INTEGER,
     "bike_id" INTEGER,
     "starting_speed" FLOAT, -- Speed the player started at
@@ -26,14 +26,10 @@ CREATE TABLE player_times (
 );
 
 CREATE TABLE verifications (
-    "verification_timestamp" TIMESTAMP, -- Time the verification was submitted
-    "verified" BOOLEAN, -- If the time has been verified
+    "player_time_id" BIGINT, -- ID of the time being verified
     "verifier_id" BIGINT, -- Discord ID of the verifier
-    "player_time_id" INTEGER, -- ID of the time being verified
-    CONSTRAINT "fk_player_time_id"
-    FOREIGN KEY ("player_time_id")
-    REFERENCES player_times ("player_time_id"),
-    PRIMARY KEY ("player_time_id") -- Primary key is the time ID
+    "verification_timestamp" FLOAT, -- Time the verification was submitted
+    "verified" BOOLEAN -- If the time has been verified
 );
 
 CREATE TABLE website_users (
@@ -52,7 +48,7 @@ CREATE TABLE players (
 CREATE TABLE checkpoint_times (
     "player_time_id" BIGINT NOT NULL,
     "checkpoint_num" INTEGER,
-    "checkpoint_time" REAL,
+    "checkpoint_time" FLOAT,
     FOREIGN KEY ("player_time_id")
     REFERENCES player_times ("player_time_id")
     ON DELETE CASCADE
@@ -61,7 +57,7 @@ CREATE TABLE checkpoint_times (
 CREATE TABLE pending_items (
     "steam_id" TEXT,
     "item_id" TEXT UNIQUE,
-    "time_redeemed" TIMESTAMP,
+    "time_redeemed" FLOAT,
     CONSTRAINT "fk_steam_id"
     FOREIGN KEY ("steam_id")
     REFERENCES players ("steam_id")
