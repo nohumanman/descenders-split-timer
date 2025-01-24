@@ -13,11 +13,11 @@ class TestTrailTimer(unittest.TestCase):
         self.conn = sqlite3.connect(':memory:')
         self.cur = self.conn.cursor()
         # Read the contents of the schema file
-        with open('server/src/schema.sql', 'r', encoding='utf-8') as schema_file:
+        with open('server/src/database-schema/schema.sql', 'r', encoding='utf-8') as schema_file:
             schema_sql = schema_file.read()
         # Execute the schema SQL commands
         self.cur.executescript(schema_sql)
-        self.queries = aiosql.from_path("server/src/queries.sql", "sqlite3")
+        self.queries = aiosql.from_path("server/src/database-schema/schema.sql", "sqlite3")
 
     def test_get_player_avatar(self):
         """ Tests the started function """

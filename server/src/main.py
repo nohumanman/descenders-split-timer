@@ -13,7 +13,7 @@ def setup_logging(log_file):
     """ Setup logging for the server """
     # Prevent logging from outputting to stdout
     logging.basicConfig(
-        filename=log_file,
+        #filename=log_file,
         level=logging.WARNING,
         format=(
             '%(asctime)s - %(name)s\t - %(levelname)s\t'
@@ -37,7 +37,7 @@ os.chdir(script_path)
 _log_file = os.path.join(script_path, "modkit.log")
 setup_logging(_log_file)
 # - Database Management System -
-dbms_instance = DBMS()
+dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
 
 # - Unity Socket Server -
 unity_socket_server = UnitySocketServer(

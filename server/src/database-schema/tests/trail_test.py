@@ -40,7 +40,13 @@ class TestTrail(unittest.TestCase):
         cur.execute("INSERT INTO Trail (world_name, trail_name) VALUES ('world1', 'trail1')")
         self.conn.commit()
         self.conn.close()
-        print("Record Inserted!")
+        # check if record was added
+        self.conn = self.connect()
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM Trail")
+        rows = cur.fetchall()
+        self.assertEqual(len(rows), 1)
+        self.conn.close()
 
 if __name__ == '__main__':
     unittest.main()
