@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, BigInteger
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, BigInteger, REAL
 from sqlalchemy.future import select
 from datetime import datetime, timedelta
 import time
@@ -182,8 +182,8 @@ class DBMS:
         async with self.async_session() as session:
             result = await session.execute(
                 select(PlayerTime)
-                .filter_by(trail_name=trail_name, ignored=False)
-                .order_by(PlayerTime.timestamp.asc())
+                .filter_by(trail_id=await self.get_trail_id(trail_name, "Test World"), deleted=False)
+                .order_by(PlayerTime.submission_timestamp.asc())
                 .limit(num)
             )
             times = result.scalars().all()
@@ -192,14 +192,34 @@ class DBMS:
                     "place": i + 1,
                     "starting_speed": time.starting_speed,
                     "name": (await session.get(Player, time.steam_id)).steam_name,
-                    "bike": time.bike_type,
+                    "bike": time.bike_id,
                     "version": time.version,
-                    "verified": time.verified,
-                    "time_id": time.time_id,
-                    "time": time.timestamp,
+                    #"verified": time.verified,
+                    "time_id": time.player_time_id,
+                    "time": time.submission_timestamp,
                 }
                 for i, time in enumerate(times)
             ]
+    
+    async def delete_time(self, time_id):
+        async with self.async_session() as session:
+            time = await session.get(PlayerTime, time_id)
+            time.deleted = True
+            await session.commit()
+    
+    async def get_time(self, time_id):
+        async with self.async_session() as session:
+            time = await session.get(PlayerTime, time_id)
+            return {
+                "starting_speed": time.starting_speed,
+                "name": (await session.get(Player, time.steam_id)).steam_name,
+                "bike": time.bike_id,
+                "version": time.version,
+                "time_id": time.player_time_id,
+                "time": time.submission_timestamp,
+            }
+
+    
 
     async def close(self):
         await self.engine.dispose()

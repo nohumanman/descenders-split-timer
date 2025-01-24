@@ -18,7 +18,7 @@ CREATE TABLE player_times (
     "submission_timestamp" REAL, -- Time the time was submitted
     "trail_id" INTEGER,
     "bike_id" INTEGER,
-    "starting_speed" REAL, -- Speed the player started at
+    "starting_speed" FLOAT, -- Speed the player started at
     "version" TEXT, -- modkit version used
     "game_version" TEXT, -- game version used
     "deleted" BOOLEAN, -- If the time has been deleted

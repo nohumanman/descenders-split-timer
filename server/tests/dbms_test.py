@@ -117,3 +117,63 @@ class TestDbms(unittest.IsolatedAsyncioTestCase):
         await dbms_instance.get_trail_id("Test Trail", "Test World")
         trails = await dbms_instance.get_trails()
         self.assertEqual(trails, [{'trail_name': 'Test Trail', 'world_name': 'Test World'}])
+
+    async def test_get_id_from_name(self):
+        self.reset_database()
+        dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+        await dbms_instance.init_db()
+        await dbms_instance.update_player("76561198000000000", "test_player")
+        self.assertEqual(await dbms_instance.get_id_from_name("test_player"), "76561198000000000")
+
+    async def test_get_player(self):
+        self.reset_database()
+        dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+        await dbms_instance.init_db()
+        await dbms_instance.update_player("76561198000000000", "test_player")
+        self.assertEqual(await dbms_instance.get_player("76561198000000000"), "test_player")
+
+    async def test_get_player_from_empty(self):
+        self.reset_database()
+        dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+        await dbms_instance.init_db()
+        self.assertEqual(await dbms_instance.get_player("76561198000000000"), None)
+
+    async def test_get_player_from_empty_with_empty_id(self):
+        self.reset_database()
+        dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+        await dbms_instance.init_db()
+        self.assertEqual(await dbms_instance.get_player(""), None)
+
+    async def test_get_all_players(self):
+        self.reset_database()
+        dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+        await dbms_instance.init_db()
+        await dbms_instance.update_player("76561198000000000", "test_player")
+        await dbms_instance.update_player("76561198000000001", "test_player2")
+        self.assertEqual(len(await dbms_instance.get_all_players()), 2)
+        self.assertEqual([player.steam_name for player in await dbms_instance.get_all_players()], ["test_player", "test_player2"])
+
+    async def test_get_leaderboard(self):
+        self.reset_database()
+        dbms_instance = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+        await dbms_instance.init_db()
+        # manually insert because submit_time uses time.time() which is not deterministic
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO trails (trail_id, trail_name, world_name) VALUES (0, 'Test Trail', 'Test World')")
+        cur.execute("INSERT INTO players (steam_id, steam_name) VALUES ('76561198000000000', 'test_player')")
+        cur.execute("INSERT INTO player_times (player_time_id, steam_id, trail_id, bike_id, starting_speed, version, submission_timestamp, deleted) VALUES (1, '76561198000000000', 0, 1, 8.34, '1.34', 0, FALSE)")
+        conn.commit()
+        leaderboard = await dbms_instance.get_leaderboard("Test Trail")
+        self.assertEqual(leaderboard, [
+            {
+                "place": 1,
+                "starting_speed": 8.34,
+                "name": "test_player",
+                "bike": 1,
+                "version": "1.34",
+                #"verified": False,
+                "time_id": 1,
+                "time": 0,
+            }
+        ])
