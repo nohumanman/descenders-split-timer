@@ -76,7 +76,7 @@ def main():
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
     # Setup logging
-    setup_logging()
+    #setup_logging()
 
     # Initialize components
     unity_socket_server, webserver, discord_bot, dbms = initialize_components()

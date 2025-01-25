@@ -16,6 +16,7 @@ from quart import (
     render_template,
     send_file
 )
+from quart_cors import cors
 
 # Authlib imports
 from authlib.integrations.requests_client import OAuth2Session
@@ -47,6 +48,7 @@ TOKEN_URL = API_BASE_URL + '/oauth2/token'
 
 logging = logging.getLogger('DescendersSplitTimer')
 
+webserver_app = Quart(__name__)
 
 class WebserverRoute():
     """ Used to denote a webserver url to view function """
@@ -78,7 +80,8 @@ class Webserver():
     """ Used to host the website using flask """
     def __init__(self, socket_server: UnitySocketServer, dbms : DBMS):
         self.dbms = dbms
-        self.webserver_app = Quart(__name__)
+        self.webserver_app = webserver_app
+        self.webserver_app = cors(self.webserver_app)
         self.webserver_app.config['SECRET_KEY'] = OAUTH2_CLIENT_SECRET
         self.socket_server: UnitySocketServer = socket_server
         self.discord_bot: DiscordBot | None = None
@@ -207,11 +210,23 @@ class Webserver():
                 self.get_replay,
                 ["GET"]
             ),
+            WebserverRoute(
+                '/api/get-total-stored-times',
+                'get_total_stored_times',
+                self.get_total_stored_times,
+                ['GET']
+            ),
+            WebserverRoute(
+                '/api/get-total-users-online',
+                'get_total_users_online',
+                self.get_total_users_online,
+                ['GET']
+            )
         ]
         self.tokens_and_ids = {}
         import asyncio
         asyncio.run(self.add_routes())
-        asyncio.run(self.register_error_handlers())
+        #asyncio.run(self.register_error_handlers())
 
     async def add_routes(self):
         """ Adds the routes to the flask app """
@@ -222,6 +237,26 @@ class Webserver():
                 view_func=route.view_func,
                 methods=route.methods
             )
+
+    async def get_total_users_online(self):
+        """Get the total number of users online"""
+        return str(len(self.socket_server.players))
+
+    @webserver_app.route("/get-gb-stored-replays")
+    async def get_gb_stored_replays():
+        """Get the file size of static/replays in GB """
+        return str(round(sum(
+            os.path.getsize(f"static/replays/{f}")
+            for f in os.listdir("static/replays")
+        ) / 1_000_000_000, 2))
+    
+    async def get_total_stored_times(self):
+        """Get the total number of stored times"""
+        # extract timestamp
+        timestamp = request.args.get("timestamp")
+        if timestamp is not None:
+            return str(await self.dbms.get_total_stored_times(int(round(float(timestamp)))))
+        return str(await self.dbms.get_total_stored_times())
 
     async def register_error_handlers(self):
         """ Register error handlers for 404 and 500 errors """

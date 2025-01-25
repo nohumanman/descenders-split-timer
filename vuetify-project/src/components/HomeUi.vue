@@ -112,6 +112,60 @@
             />
           </v-card>
         </v-col>
+        <v-col cols="3">
+          <v-card
+            class="py-4"
+            color="primary"
+            href="">
+            <!-- Currently x users online, x times submitted in past 30 days -->
+            <v-card-title>
+              {{  totalUsersOnline }}
+            </v-card-title>
+            <v-card-subtitle>
+              Users Online
+            </v-card-subtitle>
+          </v-card>
+        </v-col>
+        <v-col cols="3">
+          <v-card
+            class="py-4"
+            color="blue"
+            href="">
+            <!-- Currently x users online, x times submitted in past 30 days -->
+            <v-card-title>
+              {{ timesSubmittedPast30Days }} 
+            </v-card-title>
+            <v-card-subtitle>
+              times in past 30 days
+            </v-card-subtitle>
+          </v-card>
+        </v-col>
+        <v-col cols="3">
+          <v-card
+            class="py-4"
+            color="primary"
+            href="">
+            <v-card-title>
+              {{ totalStoredTimes }}
+            </v-card-title>
+            <v-card-subtitle>
+              total stored times
+            </v-card-subtitle>
+          </v-card>
+        </v-col>
+        <v-col cols="3">
+          <v-card
+            class="py-4"
+            color="primary"
+            href="">
+            <v-card-title>
+              {{  totalReplaySize }}GB
+            </v-card-title>
+            <v-card-subtitle>
+              of stored replays
+            </v-card-subtitle>
+          </v-card>
+        </v-col>
       </v-row>
     </v-responsive>
   </v-container>
@@ -119,4 +173,55 @@
 
 <script setup>
   //
+</script>
+
+<script>
+  import { ref } from 'vue'
+
+  var totalReplaySize = ref(0)
+  var totalStoredTimes = ref(0)
+  var totalUsersOnline = ref(0)
+  var timesSubmittedPast30Days = ref(0)
+
+  
+  fetch('http://localhost:8082/get-gb-stored-replays')
+    .then(response => response.json())
+    .then(data => {
+      totalReplaySize.value = data;
+    })
+    .catch(error => {
+      totalReplaySize.value = "ERROR ";
+    });
+  
+  fetch('http://localhost:8082/api/get-total-stored-times')
+    .then(response => response.json())
+    .then(data => {
+      // import as integer
+      totalStoredTimes.value = parseInt(data);
+      // add commas to the number
+      totalStoredTimes.value = totalStoredTimes.value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }).catch(error => {
+      totalStoredTimes.value = "ERROR";
+    });
+  
+  fetch('http://localhost:8082/api/get-total-users-online')
+    .then(response => response.json())
+    .then(data => {
+      totalUsersOnline.value = data;
+    }).catch(error => {
+      totalUsersOnline.value = "ERROR";
+    });
+  
+  var timestampThirtyDaysAgo = (new Date().getTime() - 30 * 24 * 60 * 60 * 1000) / 1000;
+  console.log(timestampThirtyDaysAgo);
+  fetch('http://localhost:8082/api/get-total-stored-times?timestamp=' + timestampThirtyDaysAgo.toString())
+    
+    .then(response => response.json())
+    .then(data => {
+      timesSubmittedPast30Days.value = parseInt(data);
+      // add commas to the number
+      timesSubmittedPast30Days.value = timesSubmittedPast30Days.value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }).catch(error => {
+      timesSubmittedPast30Days.value = "ERROR";
+    });
 </script>

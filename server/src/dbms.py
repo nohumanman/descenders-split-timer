@@ -179,6 +179,14 @@ class DBMS:
             await session.commit()
         return player_time_id
 
+    async def get_total_stored_times(self, timestamp: int = 0) -> int:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(PlayerTime)
+                .where(PlayerTime.submission_timestamp > timestamp)
+            )
+            return len(result.scalars().all())
+
     async def get_trails(self) -> list[Trail]:
         async with self.async_session() as session:
             result = await session.execute(select(Trail))
