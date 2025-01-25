@@ -35,50 +35,18 @@ class DiscordBot(commands.Bot):
             "help": "this message",
             "top <number>" : "shows the top <number> of runs on a trail"
         }
+        self.channels = {
+            "fastest_time": 929121402597015685,
+            "ban_note": 997942390432206879,
+            "new_time": 1166082973385375744
+        }
         threading.Thread(target=self.loop.run_forever).start()
 
-    async def new_fastest_time(self, time_of_run):
-        """ Used to send a message to the split time server giving the new fastest time """
-        channel_id = 929121402597015685
-        channel = self.get_channel(channel_id)
-        if isinstance(channel, discord.TextChannel):
-            await channel.send(time_of_run)
-
-    async def ban_note(self, message):
-        """ Used to send a message to the split time server dev channel of a ban record """
-        channel_id = 997942390432206879
-        channel = self.get_channel(channel_id)
-        if isinstance(channel, discord.TextChannel):
-            await channel.send(message)
-
-    async def new_time(self, message):
-        """ Used to send a message to the split time server dev channel of a ban record """
-        channel_id = 1166082973385375744
-        channel = self.get_channel(channel_id)
-        if isinstance(channel, discord.TextChannel):
-            await channel.send(message)
-
     async def send_message_to_channel(self, message, channel_id):
-        """ Used to send a message to channel """
+        """ Used to send a message to a channel """
         channel = self.get_channel(channel_id)
         if isinstance(channel, discord.TextChannel):
             await channel.send(message)
-
-    async def set_presence(self, user_name: str):
-        """ Used to set the presence of the discord bot """
-        if not self.changing_presence:
-            self.changing_presence = True
-            try:
-                await self.change_presence(
-                    status=discord.Status.online,
-                    activity=discord.Activity(
-                        type=discord.ActivityType.watching,
-                        name=user_name
-                    )
-                )
-            except AttributeError:
-                logging.info("Failed to change presence")
-            self.changing_presence = False
 
     async def on_message(self = None, message = None): # none and none default to allow inheritance
         logging.info("Message sent '%s'", message)
@@ -91,24 +59,6 @@ class DiscordBot(commands.Bot):
             for command, description in self.command_outputs.items():
                 hp += "`!" + command + "` - " + description + "\n"
             await message.channel.send(hp)
-        if (
-            (
-                (
-                    "get" in message.content.lower()
-                    or "how" in message.content.lower()
-                )
-                and (
-                    "lux" in message.content.lower()
-                    or "tron" in message.content.lower()
-                )
-            )
-            and (time.time() - self.time_of_last_lux_request) > 60
-        ):
-            await message.channel.send(
-                f"oi <@!{message.author.id}> look at "
-                "https://youtu.be/NZ9qHsONS20"
-            )
-            self.time_of_last_lux_request = time.time()
         if message.author.id in [id for id in self.queue]:
             leaderboard = await self.dbms.get_leaderboard(
                 message.content,
