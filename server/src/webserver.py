@@ -127,12 +127,8 @@ class Webserver():
                 self.leaderboard, ["GET"]
             ),
             WebserverRoute(
-                "/get-leaderboard", "get_leaderboards",
-                self.get_leaderboards, ["GET"]
-            ),
-            WebserverRoute(
-                "/leaderboard", "get_leaderboard",
-                self.get_leaderboard, ["GET"]
+                "/get-leaderboard", "get_leaderboard",
+                self.get_leaderboard_for_trail, ["GET"]
             ),
             WebserverRoute(
                 "/leaderboard/<trail>", "get_leaderboard_trail",
@@ -670,26 +666,39 @@ class Webserver():
         """ Function to get the leaderboard of the website"""
         return await render_template("Leaderboard.html")
 
-    async def get_leaderboards(self):
+
+    async def get_leaderboard_for_trail(self):
         """ Function to get the leaderboard of the website"""
 
         trail_name = request.args.get("trail_name")
-        try:
-            spectated_by = request.args.get("spectated_by")
-            timestamp = request.args.get("timestamp")
-        except KeyError:
-            spectated_by = None
-            timestamp = 0
-        if trail_name is None:
+        world_name = request.args.get("world_name")
+        if trail_name is None or world_name is None:
             return jsonify({})
-        return jsonify(
-            await self.dbms.get_leaderboard(
-                trail_name,
-                num=10,
-                spectated_by=spectated_by,
-                timestamp=timestamp
-            )
-        )
+
+        bike_type = 1
+        return jsonify([
+                {
+                    "place": 1,
+                    "starting_speed": 3,
+                    "name": "Jerry Adams",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1234567890,
+                }, {
+                    "place": 2,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }
+            ])
 
     async def get_leaderboard(self):
         """ Function to get the leaderboard of the website"""

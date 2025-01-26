@@ -199,7 +199,7 @@ class DBMS:
                 for trail in trails
             ]
 
-    async def get_leaderboard(self, trail_name, world_name, num=10, verified_only=True):
+    async def get_leaderboard(self, trail_name = None, world_name = None, num=10, verified_only=True):
         async with self.async_session() as session:
             ranked_times_subquery = (
                 select(
@@ -259,6 +259,7 @@ class DBMS:
                     "verified":True,# verified,
                     "time_id": player_time_id,
                     "time": checkpoint_time,
+                    #"submission_timestamp": submission_timestamp
                 }
                 for i, (starting_speed, steam_id, bike_id, version, checkpoint_time, player_time_id) in enumerate(times)
             ]
