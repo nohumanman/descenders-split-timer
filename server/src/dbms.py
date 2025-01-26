@@ -66,6 +66,22 @@ class WebsiteUser(Base):
     discord_name = Column(String)
     authorised = Column(Boolean)
 
+class FinalTimesDetailed(Base):
+    __tablename__ = 'final_times_detailed'
+    
+    player_time_id = Column(Integer, primary_key=True)
+    steam_id = Column(String, nullable=False)
+    submission_timestamp = Column(TIMESTAMP, nullable=False)
+    trail_id = Column(Integer, nullable=False)
+    bike_id = Column(Integer, nullable=False)
+    starting_speed = Column(Float, nullable=False)
+    version = Column(String, nullable=False)
+    game_version = Column(String, nullable=False)
+    deleted = Column(Boolean, nullable=False)
+    final_time = Column(Float, nullable=False)
+    verified = Column(Boolean, nullable=False, default=False)
+    verifier_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)  # Adjust ForeignKey table if necessary
+
 # Database Management System
 class DBMS:
     """ A simple Database Management System (DBMS) class for managing data using SQLAlchemy. """
@@ -199,69 +215,32 @@ class DBMS:
                 for trail in trails
             ]
 
-    async def get_leaderboard(self, trail_name = None, world_name = None, num=10, verified_only=True):
+    async def get_leaderboard(self, trail_name = None, world_name = None, num=10, verified=True):
         async with self.async_session() as session:
-            ranked_times_subquery = (
-                select(
-                    PlayerTime,
-                    CheckpointTime.checkpoint_time,
-                    func.row_number()
-                    .over(
-                        partition_by=PlayerTime.steam_id,  # Partition by steam_id to rank within each steam_id group
-                        order_by=func.min(CheckpointTime.checkpoint_time).asc()  # Order by the fastest time
-                    )
-                    .label("row_rank")
-                )
-                .join(
-                    CheckpointTime, CheckpointTime.player_time_id == PlayerTime.player_time_id
-                )
-                .join(
-                    Player,
-                    Player.steam_id == PlayerTime.steam_id
-                )
-                .where(
-                    PlayerTime.trail_id == await self.get_trail_id(trail_name, world_name),
-                    # Add additional conditions as needed:
-                    # PlayerTime.verified == True,  # Uncomment if verification check is required
-                    PlayerTime.deleted == False  # Ensure time is not deleted
-                )
-                .group_by(
-                    PlayerTime.player_time_id,  # Group by player_time_id to calculate min checkpoint_time
-                    PlayerTime.steam_id,
-                    CheckpointTime.checkpoint_time
-                )
-                .subquery()
-            )
+            query = select(FinalTimesDetailed).filter_by(deleted=False, verified=verified)
+            if trail_name and world_name:
+                query = query.join(Trail, Trail.trail_id == FinalTimesDetailed.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
+            if num:
+                query = query.order_by(FinalTimesDetailed.final_time).limit(num)
+            else:
+                query = query.order_by(FinalTimesDetailed.final_time)
+            result = await session.execute(query)
+            times = result.scalars().all()
 
-            # Main query: Select only the rows where row_rank = 1
-            result = await session.execute(
-                select(
-                    ranked_times_subquery.c.starting_speed,
-                    ranked_times_subquery.c.steam_id,
-                    ranked_times_subquery.c.bike_id,
-                    ranked_times_subquery.c.version,
-                    ranked_times_subquery.c.checkpoint_time,
-                    ranked_times_subquery.c.player_time_id
-                )
-                .where(ranked_times_subquery.c.row_rank == 1)  # Only take the top-ranked row for each steam_id
-                .order_by(ranked_times_subquery.c.checkpoint_time.asc())  # Order by fastest time overall
-                .limit(num)  # Limit the results if needed
-            )
-
-            times = result.all()
             return [
                 {
                     "place": i + 1,
-                    "starting_speed": starting_speed,
-                    "name": (await session.get(Player, steam_id)).steam_name,
-                    "bike": bike_id,
-                    "version": version,
-                    "verified":True,# verified,
-                    "time_id": player_time_id,
-                    "time": checkpoint_time,
-                    #"submission_timestamp": submission_timestamp
+                    "starting_speed": final_times_detailed.starting_speed,
+                    "name": (await session.get(Player, final_times_detailed.steam_id)).steam_name,
+                    "bike": final_times_detailed.bike_id,
+                    "version": final_times_detailed.version,
+                    "verified":final_times_detailed.verified,
+                    "deleted":final_times_detailed.deleted,
+                    "time_id": final_times_detailed.player_time_id,
+                    "time": final_times_detailed.final_time,
+                    "submission_timestamp": final_times_detailed.submission_timestamp
                 }
-                for i, (starting_speed, steam_id, bike_id, version, checkpoint_time, player_time_id) in enumerate(times)
+                for i, final_times_detailed in enumerate(times)
             ]
     
     async def delete_time(self, time_id):
@@ -326,23 +305,41 @@ class DBMS:
     async def get_global_best_checkpoint_times(self, trail_name, world_name):
         pass
 
-    async def get_recent_times(self, limit=10):
-        return [{
-            "avatar_src":"no.jpg",
-            "bike_type":"downhill",
-            "ignore":0,
-            "starting_speed":3.266331,
-            "steam_id":"76561199085553376",
-            "steam_name":"Lawrence_R",
-            "time_id":"-6495871202898393399",
-            "timestamp":1737747771.6579456,
-            "total_checkpoints":4,
-            "total_time":43.7205352783203,
-            "trail_name":"Fort William 4x",
-            "verified":1,
-            "version":"0.3.01",
-            "world_name":"Fort William 4x (race)-0.48"
-        }]
+    async def get_recent_times(self, page=1, itemsPerPage=10, sortBy="submission_timestamp", sortDesc=False):
+        async with self.async_session() as session:
+            query = select(FinalTimesDetailed)
+            # TODO: This should be a dictionary
+            if sortBy == "submission_timestamp":
+                query = query.order_by(FinalTimesDetailed.submission_timestamp.desc() if sortDesc else FinalTimesDetailed.submission_timestamp)
+            elif sortBy == "time":
+                query = query.order_by(FinalTimesDetailed.final_time.desc() if sortDesc else FinalTimesDetailed.final_time)
+            elif sortBy == "starting_speed":
+                query = query.order_by(FinalTimesDetailed.starting_speed.desc() if sortDesc else FinalTimesDetailed.starting_speed)
+            elif sortBy == "name":
+                query = query.order_by(FinalTimesDetailed.steam_id.desc() if sortDesc else FinalTimesDetailed.steam_id)
+            elif sortBy == "bike":
+                query = query.order_by(FinalTimesDetailed.bike_id.desc() if sortDesc else FinalTimesDetailed.bike_id)
+            elif sortBy == "version":
+                query = query.order_by(FinalTimesDetailed.version.desc() if sortDesc else FinalTimesDetailed.version)
+
+            if page and itemsPerPage:
+                query = query.limit(itemsPerPage).offset((page - 1) * itemsPerPage)
+            result = await session.execute(query)
+            times = result.scalars().all()
+            return [
+                {
+                    "starting_speed": final_times_detailed.starting_speed,
+                    "name": (await session.get(Player, final_times_detailed.steam_id)).steam_name,
+                    "bike": final_times_detailed.bike_id,
+                    "version": final_times_detailed.version,
+                    "verified":final_times_detailed.verified,
+                    "deleted":final_times_detailed.deleted,
+                    "time_id": final_times_detailed.player_time_id,
+                    "time": final_times_detailed.final_time,
+                    "submission_timestamp": final_times_detailed.submission_timestamp
+                }
+                for final_times_detailed in times
+            ]
 
     async def get_trail_average_starting_speed(self, trail_name, world_name):
         async with self.async_session() as session:

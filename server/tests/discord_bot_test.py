@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 from discord.ext import commands
 from discord_bot import DiscordBot
+from discord_bot import posh_time
 
 class TestDiscordBot(unittest.TestCase):
     @unittest.skip("Not implemented")
@@ -27,6 +28,28 @@ class TestDiscordBot(unittest.TestCase):
 
         # Check if send was called on the mock channel with the correct message
         mock_channel.send.assert_awaited_with(message)
+
+    def test_posh_time(self):
+        # Test for 0 seconds
+        self.assertEqual(posh_time(0), "0 days, 0h, 0m, 0s")
+
+        # Test for 1 second
+        self.assertEqual(posh_time(1), "0 days, 0h, 0m, 1s")
+
+        # Test for 60 seconds
+        self.assertEqual(posh_time(60), "0 days, 0h, 1m, 0s")
+
+        # Test for 3600 seconds
+        self.assertEqual(posh_time(3600), "0 days, 1h, 0m, 0s")
+
+        # Test for 86400 seconds
+        self.assertEqual(posh_time(86400), "1 days, 0h, 0m, 0s")
+
+        # Test for 90061 seconds
+        self.assertEqual(posh_time(90061), "1 days, 1h, 1m, 1s")
+
+        # Test for 172800 seconds
+        self.assertEqual(posh_time(172800), "2 days, 0h, 0m, 0s")
 
 if __name__ == '__main__':
     unittest.main()
