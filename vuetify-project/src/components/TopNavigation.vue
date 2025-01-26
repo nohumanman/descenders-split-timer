@@ -1,5 +1,5 @@
 <template>
-<v-app-bar app>
+<v-app-bar app extension-height="100%">
     <v-container fluid>
         <v-row  align="center" justify="space-between">
         <v-col cols="auto">
@@ -21,13 +21,17 @@
             <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         </v-col>
         </v-row>
+
     </v-container>
     
-    <v-spacer />
-    <template v-slot:append>
-        <v-btn @click="toggleTheme" icon="mdi-weather-sunny"></v-btn>
-        <v-btn icon="mdi-cog"></v-btn>
-    </template>
+        <v-spacer />
+        <template v-slot:append>
+            <v-btn @click="toggleTheme" icon="mdi-weather-sunny"></v-btn>
+            <v-btn icon="mdi-cog"></v-btn>
+        </template>
+        <template v-slot:extension v-if="!isOnline">
+            <TopBanner />
+        </template>
     </v-app-bar>
 
     <v-navigation-drawer
@@ -79,4 +83,14 @@ import { routes } from '@/router'
     theme.global.name.value = newTheme
     localStorage.setItem('theme', newTheme)
   }
+
+  var isOnline = true;
+
+  fetch('http://localhost:8082/get-trails')
+    .then(data => {
+        isOnline = true;
+    })
+    .catch(error => {
+        isOnline = false;
+    });
 </script>
