@@ -13,9 +13,9 @@ from quart import (
     request,
     redirect,
     jsonify,
-    render_template,
     send_file
 )
+from quart_cors import cors
 
 # Authlib imports
 from authlib.integrations.requests_client import OAuth2Session
@@ -44,9 +44,15 @@ API_BASE_URL = os.environ.get('API_BASE_URL', 'https://discordapp.com/api')
 AUTHORIZATION_BASE_URL = API_BASE_URL + '/oauth2/authorize'
 TOKEN_URL = API_BASE_URL + '/oauth2/token'
 
+'''
+routes: /streaming/
+/db/
+/api/
+'''
 
 logging = logging.getLogger('DescendersSplitTimer')
 
+webserver_app = Quart(__name__)
 
 class WebserverRoute():
     """ Used to denote a webserver url to view function """
@@ -78,7 +84,8 @@ class Webserver():
     """ Used to host the website using flask """
     def __init__(self, socket_server: UnitySocketServer, dbms : DBMS):
         self.dbms = dbms
-        self.webserver_app = Quart(__name__)
+        self.webserver_app = webserver_app
+        self.webserver_app = cors(self.webserver_app)
         self.webserver_app.config['SECRET_KEY'] = OAUTH2_CLIENT_SECRET
         self.socket_server: UnitySocketServer = socket_server
         self.discord_bot: DiscordBot | None = None
@@ -92,44 +99,12 @@ class Webserver():
                 self.me, ["GET"]
             ),
             WebserverRoute(
-                "/streaming/split-time", "split_time",
-                self.split_time, ["GET"]
-            ),
-            WebserverRoute(
                 "/permission", "permission_check",
                 self.permission, ["GET"]
             ),
             WebserverRoute(
-                "/streaming/tag", "tag",
-                self.tag, ["GET"]
-            ),
-            WebserverRoute(
-                "/", "index",
-                self.index, ["GET"]
-            ),
-            WebserverRoute(
-                "/dashboard", "dashboard",
-                self.index, ["GET"]
-            ),
-            WebserverRoute(
-                "/times", "times",
-                self.index, ["GET"]
-            ),
-            WebserverRoute(
-                "/trails", "times",
-                self.index, ["GET"]
-            ),
-            WebserverRoute(
-                "/leaderboard", "leaderboard",
-                self.leaderboard, ["GET"]
-            ),
-            WebserverRoute(
-                "/get-leaderboard", "get_leaderboards",
-                self.get_leaderboards, ["GET"]
-            ),
-            WebserverRoute(
-                "/leaderboard", "get_leaderboard",
-                self.get_leaderboard, ["GET"]
+                "/get-leaderboard", "get_leaderboard",
+                self.get_leaderboard_for_trail, ["GET"]
             ),
             WebserverRoute(
                 "/leaderboard/<trail>", "get_leaderboard_trail",
@@ -150,10 +125,6 @@ class Webserver():
             WebserverRoute(
                 "/eval/<player_id>", "eval",
                 self.eval, ["GET"]
-            ),
-            WebserverRoute(
-                "/time/<time_id>", "time_details",
-                self.time_details, ["GET"]
             ),
             WebserverRoute(
                 "/verify_time/<time_id>", "verify_time",
@@ -207,11 +178,22 @@ class Webserver():
                 self.get_replay,
                 ["GET"]
             ),
+            WebserverRoute(
+                '/api/get-total-stored-times',
+                'get_total_stored_times',
+                self.get_total_stored_times,
+                ['GET']
+            ),
+            WebserverRoute(
+                '/api/get-total-users-online',
+                'get_total_users_online',
+                self.get_total_users_online,
+                ['GET']
+            )
         ]
         self.tokens_and_ids = {}
         import asyncio
         asyncio.run(self.add_routes())
-        asyncio.run(self.register_error_handlers())
 
     async def add_routes(self):
         """ Adds the routes to the flask app """
@@ -223,17 +205,25 @@ class Webserver():
                 methods=route.methods
             )
 
-    async def register_error_handlers(self):
-        """ Register error handlers for 404 and 500 errors """
-        # Custom 404 error handler
-        @self.webserver_app.errorhandler(404)
-        async def page_not_found(e):
-            return await render_template('404.html'), 404
+    async def get_total_users_online(self):
+        """Get the total number of users online"""
+        return str(len(self.socket_server.players))
 
-        # Custom 500 error handler
-        @self.webserver_app.errorhandler(500)
-        async def internal_server_error(e):
-            return await render_template('500.html'), 500
+    @webserver_app.route("/get-gb-stored-replays")
+    async def get_gb_stored_replays():
+        """Get the file size of static/replays in GB """
+        return str(round(sum(
+            os.path.getsize(f"static/replays/{f}")
+            for f in os.listdir("static/replays")
+        ) / 1_000_000_000, 2))
+    
+    async def get_total_stored_times(self):
+        """Get the total number of stored times"""
+        # extract timestamp
+        timestamp = request.args.get("timestamp")
+        if timestamp is not None:
+            return str(await self.dbms.get_total_stored_times(int(round(float(timestamp)))))
+        return str(await self.dbms.get_total_stored_times())
 
     async def spectate(self):
         """ Function to spectate a player """
@@ -316,40 +306,6 @@ class Webserver():
             time.sleep(0.1)
         session['previous_result'] = str(trail_time)
         return jsonify(trail_time)
-
-    async def time_details(self, time_id):
-        """ Function to get the details of a time with id time_id """
-        try:
-            details = await self.dbms.get_time_details(time_id)
-            # see if the time is faster than the player's current fastest verified time
-            faster_than_current_fastest = False
-            try:
-                current_fastest = (await self.dbms.get_personal_best_checkpoint_times(details[7], details[0]))[-1]
-                if current_fastest is not None and details[6] <= current_fastest:
-                    faster_than_current_fastest = True
-            except IndexError:
-                faster_than_current_fastest = True
-            return await render_template(
-                "Time.html",
-                steam_id=details[0],
-                steam_name=details[1],
-                avatar_src=details[2],
-                timestamp=details[3],
-                time_id=details[4],
-                total_checkpoints=details[5],
-                total_time=details[6],
-                trail_name=details[7],
-                world_name=details[8],
-                ignore=details[9],
-                bike_type=details[10],
-                starting_speed=details[11],
-                version=details[12],
-                verified=details[14],
-                timestamp_to_time=datetime.fromtimestamp(details[3]),
-                warning="WARNING - SLOWER THAN PLAYER'S FASTEST VERIFIED TIME" if not faster_than_current_fastest else ""
-            )
-        except IndexError:
-            return "No time found!"
 
     async def verify_time(self, time_id):
         """ Function to verify a time with id time_id """
@@ -603,15 +559,6 @@ class Webserver():
         except MissingTokenError:
             return jsonify({})
 
-    async def split_time(self):
-        """ Function to get the split time """
-        session['previous_result'] = "{}"
-        return await render_template("SplitTime.html")
-
-    async def tag(self):
-        """ Function to get the player tag """
-        return await render_template("PlayerTag.html")
-
     async def login(self):
         """ Function to login to the website """
         scope = request.args.get(
@@ -626,41 +573,118 @@ class Webserver():
         session['oauth2_state'] = state
         return redirect(authorization_url)
 
-    async def index(self):
-        """ Function to get the index of the website """
-        logging.info("Webserver.py - index() called")
-        return await render_template("Dashboard.html")
-
-    async def leaderboard(self):
-        """ Function to get the leaderboard of the website"""
-        return await render_template("Leaderboard.html")
-
-    async def get_leaderboards(self):
+    async def get_leaderboard_for_trail(self):
         """ Function to get the leaderboard of the website"""
 
         trail_name = request.args.get("trail_name")
-        try:
-            spectated_by = request.args.get("spectated_by")
-            timestamp = request.args.get("timestamp")
-        except KeyError:
-            spectated_by = None
-            timestamp = 0
-        if trail_name is None:
+        world_name = request.args.get("world_name")
+        if trail_name is None or world_name is None:
             return jsonify({})
-        return jsonify(
-            await self.dbms.get_leaderboard(
-                trail_name,
-                num=10,
-                spectated_by=spectated_by,
-                timestamp=timestamp
-            )
-        )
 
-    async def get_leaderboard(self):
-        """ Function to get the leaderboard of the website"""
-        if self.logged_in():
-            return await render_template("Leaderboard.html")
-        return redirect("/")
+        bike_type = 1
+        return jsonify([
+                {
+                    "place": 1,
+                    "starting_speed": 3,
+                    "name": "Jerry Adams",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1234567890,
+                }, {
+                    "place": 2,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 2,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 4,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 5,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 6,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 7,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 8,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 9,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }, {
+                    "place": 10,
+                    "starting_speed": 3,
+                    "name": "JOe Mama",
+                    "bike": "enduro" if bike_type == 1 else "downhill",
+                    "version": "1.34",
+                    "verified": True,# verified,
+                    "time_id": 67876567876545678,
+                    "time": 2,
+                    "submission_timestamp": 1737854835,
+                }
+            ])
 
     async def get_leaderboard_trail(self, trail):
         """ Function to get the leaderboard of the website"""

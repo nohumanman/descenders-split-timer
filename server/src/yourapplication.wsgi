@@ -1,6 +1,6 @@
 
 import sys
-sys.path.insert(0, '/var/www/descenders-modkit')
+sys.path.insert(0, '/home/nohumanman/descenders-modkit')
 
 from main import webserver as a
 
