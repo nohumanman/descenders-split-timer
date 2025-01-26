@@ -82,6 +82,13 @@ class FinalTimesDetailed(Base):
     verified = Column(Boolean, nullable=False, default=False)
     verifier_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)  # Adjust ForeignKey table if necessary
 
+class PendingItems(Base):
+    __tablename__ = 'pending_items'
+
+    steam_id = Column(String, ForeignKey('players.steam_id'))
+    item_id = Column(String)
+    time_redeemed = Column(Float, primary_key=True)
+
 # Database Management System
 class DBMS:
     """ A simple Database Management System (DBMS) class for managing data using SQLAlchemy. """
@@ -356,6 +363,17 @@ class DBMS:
 
     async def close(self):
         await self.engine.dispose()
+    
+    async def get_pending_items(self, steam_id):
+        async with self.async_session() as session:
+            result = await session.execute(select(PendingItems).filter_by(steam_id=steam_id))
+            return result.scalars().all()
+    
+    async def redeem_pending_item(self, steam_id, item_id):
+        async with self.async_session() as session:
+            item = await session.get(PendingItems, (steam_id, item_id))
+            item.time_redeemed = time.time()
+            await session.commit()
 
 # Example usage:
 # dbms = DBMS("postgresql+asyncpg://user:password@localhost/modkit")

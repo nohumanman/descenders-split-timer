@@ -61,8 +61,6 @@ operations = {
         lambda netPlayer, data: netPlayer.set_last_trick(str(data[1])),
     "VERSION":
         lambda netPlayer, data: netPlayer.set_version(str(data[1])),
-    "GET_MEDALS":
-        lambda netPlayer, data: netPlayer.get_medals(str(data[1])),
     "LOG_LINE":
         lambda netPlayer, data: netPlayer.log_line(str(data[0:])),
 }
@@ -195,7 +193,11 @@ class UnitySocket():
         )
         for trail_name, trail in self.trails.items():
             trail.timer_info.starting_speed = starting_speed
-            if starting_speed > await self.dbms.get_average_start_time(trail_name)+2:
+            average_starting_speed = await self.dbms.get_trail_average_starting_speed(
+                trail_name,
+                self.info.world_name
+            )
+            if starting_speed > average_starting_speed+2:
                 await trail.invalidate_timer(
                     "You went through the start too fast!"
                 )
@@ -227,7 +229,8 @@ class UnitySocket():
                     "verified": leaderboard["verified"],
                 }
                 for leaderboard in await self.dbms.get_leaderboard(
-                    trail_name
+                    trail_name,
+                    self.info.world_name
                 )
             ]
         )
@@ -257,34 +260,6 @@ class UnitySocket():
                 return leaderboard_json
         return [{"place": 1, "time": 0, "name": "No times", "verified": "1", "pen": 0}]
 
-    async def get_total_time(self, on_world=False):
-        """
-        Get the total time spent by a player in the game, optionally within a specific world.
-        """
-        if on_world:
-            return await self.dbms.get_time_on_world(self.info.steam_id, self.info.world_name)
-        return await self.dbms.get_time_on_world(self.info.steam_id)
-
-    async def get_avatar_src(self):
-        """ Get the URL of the player's avatar image. """
-        if self.info.avatar_src != "":
-            return self.info.avatar_src
-        avatar_src_req = requests.get(
-            "https://api.steampowered.com/"
-            "ISteamUser/GetPlayerSummaries"
-            f"/v0002/?key={STEAM_API_KEY}"
-            f"&steamids={self.info.steam_id}", timeout=5
-        )
-        try:
-            self.info.avatar_src = avatar_src_req.json()[
-                "response"]["players"][0]["avatarfull"]
-        except (IndexError, KeyError):
-            try:
-                self.info.avatar_src = await self.dbms.get_avatar(self.info.steam_id)
-            except aiosqlite.OperationalError:
-                self.info.avatar_src = ""
-        return self.info.avatar_src
-
     async def set_steam_name(self, steam_name):
         """ Set the steam name of a player and invalidate timers if necessary """
         logging.info(
@@ -308,8 +283,7 @@ class UnitySocket():
         try:
             await self.dbms.update_player(
                 self.info.steam_id,
-                self.info.steam_name,
-                await self.get_avatar_src()
+                self.info.steam_name
             )
         except sqlite3.IntegrityError:
             # integrity error - so we probably have some bad input data
@@ -362,7 +336,7 @@ class UnitySocket():
     async def get_default_bike(self):
         """ Get the async default bike for a player. """
         if self.info.world_name is not None:
-            start_bike = "downhill" #await self.dbms.get_start_bike(self.info.world_name)
+            start_bike = "downhill"
             if start_bike is None:
                 return "enduro"
             return start_bike
@@ -375,7 +349,6 @@ class UnitySocket():
             self.info.steam_name, world_name
         )
         self.info.world_name = world_name
-        #await self.dbms.submit_ip(self.info.steam_id, self.addr[0], self.addr[1])
 
     async def send(self, data: str):
         """ Send data to the descenders unity client """
@@ -563,15 +536,3 @@ class UnitySocket():
                 ))
         except RuntimeError:
             logging.info("update_concurrent_users() called, but it's already being attempted")
-
-    async def get_medals(self, trail_name: str):
-        """ Get the medals for a player on a specific trail. """
-        logging.info(
-            "%s '%s'\t- fetched medals on trail '%s'",
-            self.info.steam_id, self.info.steam_name, trail_name
-        )
-        (rainbow, gold, silver, bronze) = await self.dbms.get_medals(
-            self.info.steam_id,
-            trail_name
-        )
-        await self.send(f"SET_MEDAL|{trail_name}|{rainbow}|{gold}|{silver}|{bronze}")
