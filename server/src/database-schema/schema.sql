@@ -57,7 +57,7 @@ CREATE TABLE checkpoint_times (
 
 CREATE TABLE pending_items (
     "steam_id" TEXT,
-    "item_id" TEXT UNIQUE,
+    "item_id" TEXT,
     "time_redeemed" FLOAT,
     CONSTRAINT "fk_steam_id"
     FOREIGN KEY ("steam_id")

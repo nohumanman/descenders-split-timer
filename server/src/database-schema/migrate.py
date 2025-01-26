@@ -24,7 +24,7 @@ with open("schema.sql", "r") as f:
     psycopg2_cursor.execute(f.read())
 
 # insert into players
-
+print("inserting players")
 for player in players:
     psycopg2_cursor.execute(
         "INSERT INTO players (steam_id, steam_name) VALUES (%s, %s)", (int(player[0]), player[1])
@@ -33,6 +33,7 @@ psycopg2_conn.commit()
 
 
 # insert into trails
+print("inserting trails")
 cursor.execute("SELECT * FROM Time")
 times = cursor.fetchall()
 trails = [[time[3], time[4]] for time in times]
@@ -50,6 +51,7 @@ psycopg2_conn.commit()
 
 
 # insert into player_times
+print("inserting player_times")
 cursor.execute("SELECT * FROM Time")
 times = cursor.fetchall()
 for time in times:
@@ -80,6 +82,7 @@ for time in times:
 
 psycopg2_conn.commit()
 # insert split times into checkpoints
+print("inserting split times")
 cursor.execute("SELECT * FROM SplitTime")
 split_times = cursor.fetchall()
 for split_time in split_times:
@@ -95,11 +98,13 @@ psycopg2_conn.commit()
 
 
 # now we do verification
+print("inserting verifications")
 cursor.execute("SELECT time_id, verified FROM Time")
 times = cursor.fetchall()
 for time in times:
     time_id = time[0]
     verified = time[1] == 1
+
     if verified:
         psycopg2_cursor.execute(
             '''
@@ -108,3 +113,37 @@ for time in times:
             (time_id, verified)
         )
         psycopg2_conn.commit()
+
+# PendingItem
+print("inserting pending items")
+cursor.execute("SELECT * FROM PendingItem")
+pending_items = cursor.fetchall()
+for pending_item in pending_items:
+    steam_id = pending_item[0]
+    item_id = pending_item[1]
+    time_redeemed = float(pending_item[2])
+    psycopg2_cursor.execute(
+        '''
+            INSERT INTO pending_items (steam_id, item_id, time_redeemed)
+            VALUES (%s, %s, %s)
+        ''',
+        (steam_id, item_id, time_redeemed)
+    )
+    psycopg2_conn.commit()
+
+# User
+print("inserting website users")
+cursor.execute("SELECT * FROM User")
+users = cursor.fetchall()
+for user in users:
+    discord_id = user[0]
+    valid = user[1] == 1
+    steam_id = user[2]
+    discord_name = user[3]
+    psycopg2_cursor.execute(
+        '''
+            INSERT INTO website_users (discord_id, authorised, steam_id, discord_name) VALUES (%s, %s, %s, %s)
+        ''',
+        (discord_id, valid, steam_id, discord_name)
+    )
+    psycopg2_conn.commit()
