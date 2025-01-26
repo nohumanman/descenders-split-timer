@@ -18,17 +18,20 @@
             </template>
         </v-col>
         <v-col v-if="xs || sm">
-            <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+            <v-app-bar-nav-icon @click.stop="drawer = !drawer">
+
+            </v-app-bar-nav-icon>
         </v-col>
+ 
+        
+        <Settings />
+
         </v-row>
 
     </v-container>
-    
+        
         <v-spacer />
-        <template v-slot:append>
-            <v-btn @click="toggleTheme" icon="mdi-weather-sunny"></v-btn>
-            <v-btn icon="mdi-cog"></v-btn>
-        </template>
+        
         <template v-slot:extension v-if="!isOnline">
             <TopBanner />
         </template>
@@ -68,21 +71,8 @@ import { routes } from '@/router'
 </script>
 
 <script setup>
-  import { useTheme, useDisplay } from 'vuetify'
+  import { useDisplay } from 'vuetify'
   const { xs, sm } = useDisplay()
-
-  const theme = useTheme()
-
-  // Load the theme from localStorage if available
-  if (localStorage.getItem('theme')) {
-    theme.global.name.value = localStorage.getItem('theme')
-  }
-
-  function toggleTheme () {
-    const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
-    theme.global.name.value = newTheme
-    localStorage.setItem('theme', newTheme)
-  }
 
   var isOnline = true;
 

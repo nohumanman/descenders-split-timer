@@ -113,6 +113,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
+            :loading="totalUsersOnline == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
@@ -127,6 +128,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
+            :loading="totalUsersOnline == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
@@ -141,6 +143,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
+            :loading="totalUsersOnline == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
@@ -154,6 +157,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
+            :loading="totalUsersOnline == 'ERROR'"
             class="py-4"
             color="blue"
             href="">

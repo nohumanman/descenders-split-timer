@@ -14,7 +14,7 @@
         </v-col>
       </v-row>
       <v-row>
-        <v-col v-for="trail in trails" cols="12" sm="12" md="6">
+        <v-col v-for="trail in trails" cols="12" sm="12" md="12" lg="6">
           <v-card
             class="mx-auto"
             max-width="1000"
@@ -27,10 +27,11 @@
             <v-card-subtitle class=text-center>
               {{  trail.world_name }}
             </v-card-subtitle>
-            <v-data-table
+            <v-data-table-virtual
+              disable-sort
               :headers="this.headers"
               :items="trail.leaderboard"
-              height="400"
+              height="580"
               item-value="name"
             >
               <template v-slot:item.place="{ item }">
@@ -42,26 +43,12 @@
               <template v-slot:item.time="{ item }">
                 {{ item.time }}
               </template>
-              <template v-slot:item.submission_timestamp="{ item }">
-                {{ (
-                  new Date(parseInt(item.submission_timestamp * 1000))
-                  ).toLocaleDateString(
-                    'en-uk', {
-                      weekday: 'short',
-                      year:'numeric',
-                      month:'short',
-                      day:'numeric'
-                    }
-                  )
-                }}
-              </template>
-              <template v-slot:item.starting_speed="{ item }">
-                {{ item.starting_speed }}
-              </template>
               <template v-slot:item.time_id="{ item }">
-                <v-btn :href="'localhost:8082/replay/' + item.time_id">Replay</v-btn>
+                <v-btn :href="'/time/' + item.time_id">
+                  <v-icon>mdi-open-in-new</v-icon>
+                </v-btn>
               </template>
-            </v-data-table>
+            </v-data-table-virtual>
           </v-card>
         </v-col>
       </v-row>
@@ -78,11 +65,9 @@ export default {
       trails: [],
       headers: [
           { title: '#', align: 'start', key: 'place' },
-          { title: 'Name', align: 'end', key: 'name' },
-          { title: 'Time', align: 'end', key: 'time' },
-          { title: 'Time Submitted', align: 'end', key: 'submission_timestamp' },
-          { title: 'Starting Speed', align: 'end', key: 'starting_speed'},
-          { title: 'Replay', align: 'end', key: 'time_id' },
+          { title: 'Name', align: 'center', key: 'name' },
+          { title: 'Time', align: 'center', key: 'time' },
+          { title: '', align: 'end', key: 'time_id' },
         ],
     };
   },
@@ -121,8 +106,8 @@ export default {
     // name is reactive and
     // must use .value
     switch (name.value) {
-      case 'xs': return 320
-      case 'sm': return 470
+      case 'xs': return 450
+      case 'sm': return 600
       case 'md': return 950
       case 'lg': return 1200
       case 'xl': return 1100
