@@ -91,28 +91,21 @@ namespace ModLoaderSolution
                         g.AddComponent<SloMoZone>();
                 }                
             }
-            if (GameObject.Find("SpeedTrapTrigger") != null)
-                GameObject.Find("SpeedTrapTrigger").AddComponent<SpeedTrap>();
+            if (Utilities.GameObjectFind("SpeedTrapTrigger") != null)
+                Utilities.GameObjectFind("SpeedTrapTrigger").AddComponent<SpeedTrap>();
             if (firstStart)
             {
                 DontDestroyOnLoad(gameObject.transform.root);
                 List<Type> firstStartComponents = new List<Type>()
                 {
-                    typeof(PlayerManagement), typeof(NetClient), typeof(BikeSwitcher), typeof(TimeModifier),
+                    typeof(ErrorLogger), typeof(NetClient), typeof(BikeSwitcher), typeof(TimeModifier),
                     typeof(TrickCapturer), typeof(GimbalCam), typeof(MovableCam), typeof(TeleportAtCursor),
                     typeof(StatsModification), typeof(UserInterface), typeof(ChaosMod), typeof(Chat), typeof(FollowCamSystem),
-                    typeof(CustomDebug)
+                    typeof(CustomDebug), typeof(FovModifier), typeof(CustomDiscordManager), typeof(PlayerManagement)
                 };
                 // add all components to be added on first load
                 foreach(Type component in firstStartComponents)
                     gameObject.AddComponent(component);
-            }
-            if (AssetBundling.Instance != null && AssetBundling.Instance.bundle != null && ModLoaderSolution.Utilities.instance.isMod() && GameObject.Find("Map_Name") == null)
-            {
-                GameObject IntroSeq = AssetBundling.Instance.bundle.LoadAsset<GameObject>("IntroSequence");
-                Instantiate(IntroSeq).AddComponent<DisableOnAny>();
-                GameObject.Find("Map_Name").GetComponent<UnityEngine.UI.Text>().text = "Descenders Modkit ";
-                GameObject.Find("Description").GetComponent<UnityEngine.UI.Text>().text = "- TAB to open bike switcher\n- CTRL-I to open stats modification\n- Quit the game to remove this mod\n\nFor more info go to split-timer.nohumanman.com/info";
             }
         }
         public void Start()

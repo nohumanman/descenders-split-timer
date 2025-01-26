@@ -7,8 +7,8 @@ import logging
 from werkzeug.utils import secure_filename
 
 # Flask imports
-from flask import (
-    Flask,
+from quart import (
+    Quart,
     session,
     request,
     redirect,
@@ -78,7 +78,7 @@ class Webserver():
     """ Used to host the website using flask """
     def __init__(self, socket_server: UnitySocketServer, dbms : DBMS):
         self.dbms = dbms
-        self.webserver_app = Flask(__name__)
+        self.webserver_app = Quart(__name__)
         self.webserver_app.config['SECRET_KEY'] = OAUTH2_CLIENT_SECRET
         self.socket_server: UnitySocketServer = socket_server
         self.discord_bot: DiscordBot | None = None
@@ -209,10 +209,11 @@ class Webserver():
             ),
         ]
         self.tokens_and_ids = {}
-        self.add_routes()
-        self.register_error_handlers()
+        import asyncio
+        asyncio.run(self.add_routes())
+        asyncio.run(self.register_error_handlers())
 
-    def add_routes(self):
+    async def add_routes(self):
         """ Adds the routes to the flask app """
         for route in self.routes:
             self.webserver_app.add_url_rule(
@@ -222,17 +223,17 @@ class Webserver():
                 methods=route.methods
             )
 
-    def register_error_handlers(self):
+    async def register_error_handlers(self):
         """ Register error handlers for 404 and 500 errors """
         # Custom 404 error handler
         @self.webserver_app.errorhandler(404)
-        def page_not_found(e):
-            return render_template('404.html'), 404
+        async def page_not_found(e):
+            return await render_template('404.html'), 404
 
         # Custom 500 error handler
         @self.webserver_app.errorhandler(500)
-        def internal_server_error(e):
-            return render_template('500.html'), 500
+        async def internal_server_error(e):
+            return await render_template('500.html'), 500
 
     async def spectate(self):
         """ Function to spectate a player """
@@ -263,11 +264,6 @@ class Webserver():
                 if args is None:
                     return "Failed - no args"
                 await self.socket_server.get_player_by_id(player_id).send(args)
-                if args.startswith("SET_BIKE"):
-                    specified = args[9:10]
-                    player = self.socket_server.get_player_by_id(player_id)
-                    bike_corresponding = {"1": "downhill", "0": "enduro", "2": "hardtail"}
-                    player.info.bike_type = bike_corresponding[specified]
             except PlayerNotFound:
                 return "Player not found"
             return ""
@@ -296,18 +292,18 @@ class Webserver():
     async def get_spectating_time(self):
         """ Function to get the times of the player we are spectating """
         our_id = request.args.get("my_id")
-        try:
-            us = self.socket_server.get_player_by_id(str(our_id))
-        except PlayerNotFound:
-            return f"Failed to find you! your id : {our_id}"
-        try:
-            spectating = self.socket_server.get_player_by_id(us.info.spectating_id)
-        except PlayerNotFound:
-            return "Failed to find player you are spectating"
         # get time
         trail_time = {}
         time_started = 0
         while not trail_time or str(trail_time) == str(session['previous_result']):
+            try:
+                us = self.socket_server.get_player_by_id(str(our_id))
+            except PlayerNotFound:
+                return f"Failed to find you! your id : {our_id}"
+            try:
+                spectating = self.socket_server.get_player_by_id(us.info.spectating_id)
+            except PlayerNotFound:
+                return "Failed to find player you are spectating"
             for trail_name in spectating.trails:
                 trail = await spectating.get_trail(trail_name)
                 if trail.timer_info.started:
@@ -317,6 +313,7 @@ class Webserver():
                     if len(trail.timer_info.times) != 0:
                         trail_time = {"time": trail.timer_info.times[-1], "started": False, "times": trail.timer_info.times}
                     time_started = trail.timer_info.time_started
+            time.sleep(0.1)
         session['previous_result'] = str(trail_time)
         return jsonify(trail_time)
 
@@ -324,7 +321,15 @@ class Webserver():
         """ Function to get the details of a time with id time_id """
         try:
             details = await self.dbms.get_time_details(time_id)
-            return render_template(
+            # see if the time is faster than the player's current fastest verified time
+            faster_than_current_fastest = False
+            try:
+                current_fastest = (await self.dbms.get_personal_best_checkpoint_times(details[7], details[0]))[-1]
+                if current_fastest is not None and details[6] <= current_fastest:
+                    faster_than_current_fastest = True
+            except IndexError:
+                faster_than_current_fastest = True
+            return await render_template(
                 "Time.html",
                 steam_id=details[0],
                 steam_name=details[1],
@@ -340,7 +345,8 @@ class Webserver():
                 starting_speed=details[11],
                 version=details[12],
                 verified=details[14],
-                timestamp_to_time=datetime.fromtimestamp(details[3])
+                timestamp_to_time=datetime.fromtimestamp(details[3]),
+                warning="WARNING - SLOWER THAN PLAYER'S FASTEST VERIFIED TIME" if not faster_than_current_fastest else ""
             )
         except IndexError:
             return "No time found!"
@@ -348,24 +354,30 @@ class Webserver():
     async def verify_time(self, time_id):
         """ Function to verify a time with id time_id """
         if await self.permission() == "AUTHORISED":
+            our_discord_id = self.get_discord_id()
             await self.dbms.verify_time(time_id)
             try:
                 details = await self.dbms.get_time_details(time_id)
                 steam_name = details[1]
-                time_id=details[6]
-                total_time=details[8]
-                trail_name=details[9]
-                if self.discord_bot is not None:
+                time_id=details[4]
+                total_time=details[6]
+                trail_name=details[7]
+                verified=details[14]
+                if self.discord_bot is not None and verified == 1:
                     self.discord_bot.loop.run_until_complete(
-                        self.discord_bot.new_time(
-                            f"[Time](https://modkit.nohumanman.com/time/{time_id})"
-                            f" by {steam_name} of {total_time} on {trail_name} is verified."
+                        self.discord_bot.send_message_to_channel(
+                                f"[Time](https://modkit.nohumanman.com/time/{time_id})"
+                                f" by {steam_name} of {total_time} on {trail_name} has been verified by <@{our_discord_id}>."
+                                " This time will now display in leaderboards where appropriate. 🎉",
+                                1213907351896334426
                         )
                     )
             except RuntimeError as e:
                 logging.warning("Failed to submit time to discord server %s", e)
-            return "verified"
-        return "unverified"
+                return "ERROR: Failed to submit time to discord server"
+            return "Toggled verification on time"
+        else:
+            return "ERROR: NO PERMISSION"
 
     async def get_output_log(self, player_id):
         """ Function to get the output log of a player with id player_id """
@@ -391,27 +403,33 @@ class Webserver():
 
     async def get(self):
         """ Function to get the details of a player with id player_id """
-        player_json = [
-            {
-                "steam_id": player.info.steam_id,
-                "steam_name": player.info.steam_name,
-                "steam_avatar_src": await player.get_avatar_src(),
-                "reputation": player.info.reputation,
-                "total_time": "",#player.get_total_time(),
-                "time_on_world": "",#player.get_total_time(onWorld=True),
-                "world_name": player.info.world_name,
-                "last_trick": player.info.last_trick,
-                "version": player.info.version,
-                "bike_type": player.info.bike_type,
-                "trail_info": str(player.trails),
-                "address": ""#(lambda: player.addr if self.permission() == "AUTHORISED" else "")()
-            } for player in self.socket_server.players
-        ]
-        return jsonify({"players": player_json})
+        if True:
+            player_json = [
+                {
+                    "steam_id": player.info.steam_id,
+                    "steam_name": player.info.steam_name,
+                    "steam_avatar_src": await player.get_avatar_src(),
+                    "reputation": player.info.reputation,
+                    "total_time": "",#player.get_total_time(),
+                    "time_on_world": "",#player.get_total_time(onWorld=True),
+                    "world_name": player.info.world_name,
+                    "last_trick": player.info.last_trick,
+                    "version": player.info.version,
+                    "bike_type": player.info.bike_type,
+                    "trail_info": str(player.trails),
+                    "address": ""#(lambda: player.addr if self.permission() == "AUTHORISED" else "")()
+                } for player in self.socket_server.players
+            ]
+            return jsonify({"players": player_json})
+        else:
+            # return json of every map and amount of players in it
+            return jsonify({"state": {
+                "players": len(self.socket_server.players)
+            }})
 
     async def get_trails(self):
         """ Function to get the trails """ 
-        return jsonify({"trails": await self.dbms.get_trails()})
+        return jsonify({"trails": (await self.dbms.get_trails())})
 
     async def ignore_time(self, time_id : int, value: str):
         """ Function to ignore a time with id time_id"""
@@ -470,7 +488,7 @@ class Webserver():
         oauth2_token = session.get('oauth2_token')
         if oauth2_token is None:
             return "UNKNOWN"
-        discord = self.make_session(token=oauth2_token)
+        discord = await self.make_session(token=oauth2_token)
         user = discord.get(API_BASE_URL + '/users/@me').json()
         if user["id"] in [str(x[0]) for x in await self.dbms.get_valid_ids()]:
             return "AUTHORISED"
@@ -483,7 +501,7 @@ class Webserver():
             or await self.permission() == "UNAUTHORISED"
         )
 
-    def make_session(self, token=None, state=None, scope=None):
+    async def make_session(self, token=None, state=None, scope=None):
         """ Function to make a session """
         return OAuth2Session(
             client_id=OAUTH2_CLIENT_ID,
@@ -499,13 +517,13 @@ class Webserver():
             refresh_token=self.token_updater
         )
 
-    def token_updater(self, token):
+    async def token_updater(self, token):
         """ Function to update the token """
         session['oauth2_token'] = token
 
     async def get_our_steam_id(self):
         """ Function to get the steam id of the user """
-        discord = self.make_session(token=session.get('oauth2_token'))
+        discord = await self.make_session(token=session.get('oauth2_token'))
         connections = discord.get(
             API_BASE_URL + '/users/@me/connections'
         ).json()
@@ -515,6 +533,12 @@ class Webserver():
             if connection["type"] == "steam":
                 return connection["id"]
         return "None"
+
+    async def get_discord_id(self):
+        """ Function to get the discord name """
+        discord = await self.make_session(token=session.get('oauth2_token'))
+        user = discord.get(API_BASE_URL + '/users/@me').json()
+        return user["id"]
 
     # routes
     async def callback(self):
@@ -582,13 +606,13 @@ class Webserver():
     async def split_time(self):
         """ Function to get the split time """
         session['previous_result'] = "{}"
-        return render_template("SplitTime.html")
+        return await render_template("SplitTime.html")
 
-    def tag(self):
+    async def tag(self):
         """ Function to get the player tag """
-        return render_template("PlayerTag.html")
+        return await render_template("PlayerTag.html")
 
-    def login(self):
+    async def login(self):
         """ Function to login to the website """
         scope = request.args.get(
             'scope',
@@ -605,28 +629,37 @@ class Webserver():
     async def index(self):
         """ Function to get the index of the website """
         logging.info("Webserver.py - index() called")
-        return render_template("Dashboard.html")
+        return await render_template("Dashboard.html")
 
     async def leaderboard(self):
         """ Function to get the leaderboard of the website"""
-        return render_template("Leaderboard.html")
+        return await render_template("Leaderboard.html")
 
     async def get_leaderboards(self):
         """ Function to get the leaderboard of the website"""
 
         trail_name = request.args.get("trail_name")
+        try:
+            spectated_by = request.args.get("spectated_by")
+            timestamp = request.args.get("timestamp")
+        except KeyError:
+            spectated_by = None
+            timestamp = 0
         if trail_name is None:
             return jsonify({})
         return jsonify(
             await self.dbms.get_leaderboard(
-                trail_name
+                trail_name,
+                num=10,
+                spectated_by=spectated_by,
+                timestamp=timestamp
             )
         )
 
-    def get_leaderboard(self):
+    async def get_leaderboard(self):
         """ Function to get the leaderboard of the website"""
         if self.logged_in():
-            return render_template("Leaderboard.html")
+            return await render_template("Leaderboard.html")
         return redirect("/")
 
     async def get_leaderboard_trail(self, trail):
@@ -639,4 +672,4 @@ class Webserver():
         if lim_str is None:
             return jsonify({})
         lim = int(lim_str)
-        return jsonify({"times": await self.dbms.get_all_times(lim)})
+        return jsonify({"times": await self.dbms.get_recent_times(lim)})

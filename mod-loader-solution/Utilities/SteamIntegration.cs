@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using ModLoaderSolution;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -28,15 +29,18 @@ namespace PlayerIdentification{
 				playerId.steamID = "1234567890";
 				return playerId;
 			}
-            GameObject playerInfoHuman = GameObject.Find("PlayerInfo_Human");
+            GameObject playerInfoHuman = ModLoaderSolution.Utilities.GameObjectFind("PlayerInfo_Human");
             if (playerInfoHuman == null)
             {
                 return new Identification();
             }
+       
             Component player_info_impact = playerInfoHuman.GetComponent("PlayerInfoImpact");
             string json = JsonUtility.ToJson(player_info_impact);
-            json = json.Replace("a^sXfY", "playerName");
-            json = json.Replace("r~xs{n", "steamID");
+
+            json = json.Replace(ObfuscationHandler.GetObfuscated("playerName"), "playerName");
+            json = json.Replace(ObfuscationHandler.GetObfuscated("userID"), "steamID");
+            
             Identification id = JsonUtility.FromJson<Identification>(json);
             return id;
         }

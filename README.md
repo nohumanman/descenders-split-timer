@@ -3,7 +3,7 @@
 # Descenders Modkit
 
 [![Python application][python-application-svg-url]][python-application-url]
-[![Release ModLoaderSolution](https://github.com/nohumanman/descenders-modkit/actions/workflows/release.yml/badge.svg)](https://github.com/nohumanman/descenders-modkit/actions/workflows/release.yml)
+[![Release ModLoaderSolution](https://github.com/nohumanman/descenders-modkit/actions/workflows/dotnet-release.yml/badge.svg)](https://github.com/nohumanman/descenders-modkit/actions/workflows/dotnet-release.yml)
 [![License: GPL v3][gpg-license-svg-url]][gpg-license-url]
 
 [python-application-svg-url]: https://github.com/nohumanman/descenders-modkit/actions/workflows/python-app.yml/badge.svg 
@@ -56,7 +56,7 @@ BI0S0CK](https://mod.io/g/descenders/u/bi0s0ck)*
 - **[Fort William 4x](https://mod.io/g/descenders/m/fort-william-4x)** by *[BBB171](https://mod.io/g/descenders/u/bbb1711)*
 - **[50to01 Line](https://mod.io/g/descenders/m/50to01-line)** by *[antgrass](https://mod.io/g/descenders/u/antgrass)*
 
-### List of features
+### List of features & fixes
 
 - Timer that records split times for a track
 - Boundary detection for times on a track (with manual verification possible via a replay)
@@ -68,5 +68,7 @@ BI0S0CK](https://mod.io/g/descenders/u/bi0s0ck)*
 - Stats modification for the bike (acceleration, airFriction, rollResistance, etc.)
 - Fix for music repeating constantly in mod maps
 - Adds discord rich presence for mod maps
+- Mods in the mod browser order alphabetically
+- Remove mod of the year leaderboard from 2020 from the lobby
 
-and many, many more..
+and more..

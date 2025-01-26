@@ -14,6 +14,7 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using System.Diagnostics;
 using TMPro;
+using UnityEngine.SceneManagement;
 using InControl;
 
 // All credit to h!gh voltage for this script (https://www.youtube.com/c/FdShighvoltage)
@@ -23,8 +24,7 @@ namespace ModLoaderSolution
     public class Utilities : MonoBehaviour
     {
         public static Utilities instance;
-        public string uniqueID;
-        private float GameTime = 0f;
+
         public readonly Dictionary<string, string> seeds = new Dictionary<string, string>() {
                 { "0", "Lobby" },
                 {"1008" , "BikeOut v1"},
@@ -53,19 +53,7 @@ namespace ModLoaderSolution
                 {"1031" , "Llangynog Freeride"},
                 {"1032" , "Rival Falls"}
             };
-        public float gameTime
-        {
-            get
-            {
-                return GameTime;
-            }
-            private set
-            {
-                GameTime = value;
-            }
-        }
-
-        public GameObject playerObject;
+        public static GameObject playerObject;
         string playerName = null;
         string playerTotalRep = null;
         public bool playerFirstSpawned = false;
@@ -80,28 +68,53 @@ namespace ModLoaderSolution
         }
         public void Awake()
         {
-            NormaliseModSongs();
+            //NormaliseModSongs();
         }
+        
         public void Update()
         {
             if (isFlying)
                 SetVel(20f);
-            if (!normalised && FindObjectOfType<GameData>() != null)
+            if (!normalised && Utilities.GameObjectFindObjectOfType<GameData>() != null)
             {
-                NormaliseModSongs();
+                //NormaliseModSongs();
                 normalised = true;
+            }
+            if (Input.GetKey(KeyCode.D) && Input.GetKeyDown(KeyCode.Alpha9)){
+                Utilities.Log("Call Stats:\n" + GetCallStats());
+            }
+            GameObject content = Utilities.GameObjectFind("Content");
+            if (content != null)
+            {
+                List<Transform> idealOrder = new List<Transform>();
+                // find the ideal order
+                foreach (Transform modInfoButtonTransform in content.transform)
+                {
+                    GameObject modInfoButton = modInfoButtonTransform.gameObject;
+                    if (modInfoButton.GetComponentInChildren<TextMeshProUGUI>().text != "OPEN MOD BROWSER")
+                        idealOrder.Add(modInfoButtonTransform);
+                }
+                idealOrder = idealOrder.OrderBy(x => x.gameObject.GetComponentInChildren<TextMeshProUGUI>().text).ToList();
+                int i = 1;
+                foreach (Transform modInfoButton in idealOrder)
+                {
+                    modInfoButton.SetSiblingIndex(i);
+                    i++;
+                }
             }
         }
         public Gesture[] gestures = new Gesture[0] {};
         public void GetGestures()
         {
-            string gesturesField = "EL\u0080\u007f\u0084\u0080o";
-            gestures = (Gesture[])typeof(Cyclist).GetField(gesturesField).GetValue(GetPlayer().GetComponent<Cyclist>());
+            gestures = (Gesture[])typeof(Cyclist).GetField(
+                ObfuscationHandler.GetObfuscated("gestures")
+            ).GetValue(GetPlayer().GetComponent<Cyclist>());
         }
         public void ReleaseAllLimbsOnTrick()
         {
-            string gesturesField = "EL\u0080\u007f\u0084\u0080o";
-            gestures = (Gesture[])typeof(Cyclist).GetField(gesturesField).GetValue(GetPlayer().GetComponent<Cyclist>());
+            gestures = (Gesture[])typeof(Cyclist).GetField(
+                ObfuscationHandler.GetObfuscated("gestures")
+            ).GetValue(GetPlayer().GetComponent<Cyclist>());
             foreach (Gesture x in gestures)
             {
                 x.oneShotTrick = false;
@@ -115,9 +128,9 @@ namespace ModLoaderSolution
         {
             // Function to put proper playlist instead of 'Descenders' song on mod maps
             // dirty the current session (to force a playlist re-load)
-            FieldInfo currentSessionField = typeof(SessionManager).GetField("\u0083ESVMoz"); // currentSession field
-            object session = currentSessionField.GetValue(FindObjectOfType<SessionManager>()); // currentSession value
-            FieldInfo worldMapField = session.GetType().GetField("WnRr]U`"); // worldMap
+            FieldInfo currentSessionField = typeof(SessionManager).GetField(ObfuscationHandler.GetObfuscated("currentSession")); // currentSession field
+            object session = currentSessionField.GetValue(Utilities.GameObjectFindObjectOfType<SessionManager>()); // currentSession value
+            FieldInfo worldMapField = session.GetType().GetField(ObfuscationHandler.GetObfuscated("worldMap")); // worldMap
             WorldMap worldMap = new WorldMap(); // worldMap will be null, so we need to make one up
             worldMap.world = World.Glaciers; // set the world to glaciers (not World.None), this will play glaciers playlist
             worldMapField.SetValue(session, worldMap);
@@ -138,8 +151,11 @@ namespace ModLoaderSolution
         GameObject cyclist;
         public bool hasBailed()
         {
+            // if player doesn't exist they can't bail.
+            if (GetPlayer() == null) return false;
+            // see if cyclist is connected to player
             if (cyclist == null)
-                cyclist = GameObject.Find("Cyclist");
+                cyclist = Utilities.GameObjectFind("Cyclist");
             if (cyclist != null)
                 if (cyclist.transform.root.name == "Player_Human")
                     return false;
@@ -171,20 +187,19 @@ namespace ModLoaderSolution
         public void RestartReplay()
         {
             Utilities.Log("RestartReplay()");
-            GameObject.Find("Player_Human").GetComponent<VehicleReplay>().SendMessage("StartRecord");
+            Utilities.GameObjectFind("Player_Human").GetComponent<VehicleReplay>().SendMessage("StartRecord");
         }
         public void SaveReplayToFile(string path)
         {
-            string replayObfuscatedName = "Ym}\u0084upr";
             Utilities.Log("SaveReplayToFile('" + path + "')");
             Assembly a = Assembly.Load("Assembly-CSharp");
-            Type replayType = a.GetType("l\u0080KRMtV");
-            MethodInfo magicMethod = replayType.GetMethod("I\u0083tz]jk");
+            Type replayType = a.GetType(ObfuscationHandler.GetObfuscated("Replay"));
+            MethodInfo magicMethod = replayType.GetMethod(ObfuscationHandler.GetObfuscated("SaveReplay"));
             Utilities.Log("magicMethod found -" + magicMethod);
-            Utilities.Log("Vehicle Replay - " + GameObject.Find("Player_Human").GetComponent<VehicleReplay>());
+            Utilities.Log("Vehicle Replay - " + Utilities.GameObjectFind("Player_Human").GetComponent<VehicleReplay>());
             object replayClassObject = typeof(VehicleReplay)
-                .GetField(replayObfuscatedName)
-                .GetValue(GameObject.Find("Player_Human").GetComponent<VehicleReplay>());
+                .GetField(ObfuscationHandler.GetObfuscated("replay"))
+                .GetValue(Utilities.GetPlayer().GetComponent<VehicleReplay>());
             Utilities.Log("replayClassObject found -" + replayClassObject);
             magicMethod.Invoke(replayClassObject, new object[] { path });
         }
@@ -192,12 +207,7 @@ namespace ModLoaderSolution
         {
             return Vector3.Angle(GetPlayer().transform.up, Vector3.up);
         }
-        public string GetUniqueID()
-        {
-            if (uniqueID != null)
-                return uniqueID;
-            return GetUniqueID("URM.txt");
-        }
+
         public bool isFlying;
         bool PlayerCollision;
         public void TogglePlayerCollision()
@@ -209,86 +219,33 @@ namespace ModLoaderSolution
         {
             isFlying = !isFlying;
         }
-        string GetUniqueID(string file)
-        {
-            string id = null;
-            // read/save user id
-            try
-            {
-                string userFile = Directory.GetCurrentDirectory() + "\\" + file;
-                if (!File.Exists(userFile))
-                {
-                    id = Guid.NewGuid().ToString();
-                    StreamWriter sw = new StreamWriter(userFile);
-                    sw.WriteLine(id);
-                    sw.Close();
-                    // Utilities.Log("ModLoaderSolution | Created " + file);
-                }
-                else
-                {
-                    id = File.ReadAllLines(userFile)[0];
-                    id = id.Replace("\n", "");
-                    // Utilities.Log("ModLoaderSolution | Found UserID " + id);
-                }
-            }
-            catch (Exception)
-            {
-                // Utilities.Log("ModLoaderSolution | Could not read user file:");
-                // Utilities.Log(e);
-            }
-
-            uniqueID = id;
-            return uniqueID;
-        }
         public string GetCurrentMap()
         {
             SessionManager sessionManager = Singleton<SessionManager>.SP;
-            return sessionManager.GetCurrentLevelFullSeed();
+            string map = sessionManager.GetCurrentLevelFullSeed();
+            if (map == null)
+                throw new NullReferenceException("Map is none!");
+            return map;
         }
         public static long ToUnixTime(DateTime date)
         {
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             return Convert.ToInt64((date - epoch).TotalSeconds);
         }
-        public void UpdateDiscordPresence(long startTimestamp = 0)
-        {
-            // don't do custom presence in freeplay
-            if (!isBikePark() && !isMod() && !(GetCurrentMap() == "0"))
-                return;
-            DiscordManager dm = DiscordManager.SP;
-            // dm.presence.details = dm.\u0084mfo\u007fzP.details
-            DiscordRpc.RichPresence richpresence = (DiscordRpc.RichPresence)typeof(DiscordManager).GetField("\u0084mfo\u007fzP").GetValue(dm);
-            DiscordRpc.RichPresence richpresenceCopy = richpresence;
-            string current_map = GetCurrentMap().Split('-')[0];
-            
-            if (seeds.TryGetValue(current_map, out var seed))
-                richpresence.details = "In " + seed;
-            else
-                richpresence.details = "In " + current_map;
-            richpresence.largeImageText = "nohumanman's Descenders Modkit";
-            richpresence.largeImageKey = "overworld";
-            // teams to small image
-            //richpresence.smallImageKey = "arboreal";
-            //richpresence.smallImageText = "Team Arboreal";
-            if (startTimestamp != 0)
-                richpresence.startTimestamp = startTimestamp;
 
-            typeof(DiscordManager).GetField("\u0084mfo\u007fzP").SetValue(dm, richpresence);
-            // if different, update presence
-            // NOTE: This will always update, because our assignment of rich presence
-            // is overwritten immediately by descenders
-            if (!richpresenceCopy.Equals(richpresence))
-                DiscordRpc.UpdatePresence(ref richpresence);
-            
-        }
         public List<Mod> GetAllMods()
         {
-            GameData gameData = FindObjectOfType<GameData>();
+            GameData gameData = Utilities.GameObjectFindObjectOfType<GameData>();
             //UcS\u0082\u0081DM mods
             List<Mod> mods = (List<Mod>)gameData.GetType().GetField("UcS\u0082\u0081DM").GetValue(gameData);
             return mods;
         }
-
+        public bool isInFreeplay()
+        {
+            if (!isBikePark() && !isMod() && !(GetCurrentMap() == "0"))
+                return true;
+            return false;
+        }
         public bool isMod()
         {
             string currentMap = GetCurrentMap();
@@ -302,7 +259,7 @@ namespace ModLoaderSolution
                 string currentMap = GetCurrentMap();
                 //ZIq^s|j bikeParks
                 //FqVmLOT bonusLevels
-                GameData gameData = FindObjectOfType<GameData>();
+                GameData gameData = Utilities.GameObjectFindObjectOfType<GameData>();
                 BonusLevelInfo[] bikeParks = (BonusLevelInfo[])gameData.GetType().GetField("ZIq^s|j").GetValue(gameData);
                 BonusLevelInfo[] bonusLevels = (BonusLevelInfo[])gameData.GetType().GetField("FqVmLOT").GetValue(gameData);
                 foreach (BonusLevelInfo level in bikeParks)
@@ -334,13 +291,13 @@ namespace ModLoaderSolution
 
         public BonusLevelInfo[] GetAllBikeParks()
         {
-            GameData gameData = FindObjectOfType<GameData>();
+            GameData gameData = Utilities.GameObjectFindObjectOfType<GameData>();
             BonusLevelInfo[] bikeParks = (BonusLevelInfo[])gameData.GetType().GetField("ZIq^s|j").GetValue(gameData);
             return bikeParks;
         }
         public bool isInReplayMode()
         {
-            if (GameObject.Find("State_ReplayBrowser") != null)
+            if (Utilities.GameObjectFind("State_ReplayBrowser") != null)
                 return true;
             return false;
         }
@@ -351,7 +308,7 @@ namespace ModLoaderSolution
             else if (seed == "1017")
                 return "New Lexico (1017)";
 
-            GameData gameData = FindObjectOfType<GameData>();
+            GameData gameData = Utilities.GameObjectFindObjectOfType<GameData>();
             BonusLevelInfo[] bikeParks = (BonusLevelInfo[])gameData.GetType().GetField("ZIq^s|j").GetValue(gameData);
             BonusLevelInfo[] bonusLevels = (BonusLevelInfo[])gameData.GetType().GetField("FqVmLOT").GetValue(gameData);
             foreach (BonusLevelInfo level in bikeParks)
@@ -381,10 +338,76 @@ namespace ModLoaderSolution
 
         public FinishLine GetFinishLine()
         {
-            FinishLine finishLine = GameObject.FindObjectOfType<FinishLine>();
+            FinishLine finishLine = Utilities.GameObjectFindObjectOfType<FinishLine>();
             return finishLine;
         }
+        static Hashtable cachedObjectsOfType = new Hashtable();
+        static Hashtable recentlySearchedTypes = new Hashtable();
+        public static T GameObjectFindObjectOfType<T>() where T : Object
+        {
+            return (T)GameObjectFindObjectOfType(typeof(T));
+        }
+        public static Object GameObjectFindObjectOfType(Type type)
+        {
+            if (cachedObjectsOfType.ContainsKey(type))
+                return (Object)cachedObjectsOfType[type];
+            // we don't have the gameobject cached!
+            if (recentlySearched.ContainsKey(type))
+                if ((Time.time - (float)recentlySearched[type]) < 1)
+                    return null; // we searched for it not long ago, so let's not bother now
+            cachedObjects.RemoveAll(x => !x); // remove all null caches (in case any have been deleted)
+            Object objectOfType = (Object)FindObjectOfType(type);
+            if (objectOfType != null)
+                cachedObjectsOfType.Add(type, objectOfType);
+            else
+            {
+                // if null
+                if (recentlySearchedTypes.ContainsKey(type))
+                    recentlySearched[type] = Time.time; // we'll update our failed search
+                else
+                    recentlySearchedTypes.Add(type, Time.time); // we'll add our failed search
+            }
 
+            return objectOfType;
+        }
+        static List<Object> cachedObjects = new List<Object>();
+        static Hashtable recentlySearched = new Hashtable();
+        public static GameObject GameObjectFind(string gameobjectName)
+        {
+            foreach (GameObject go in cachedObjects)
+            {
+                if (go != null)
+                {
+                    if (go?.name == gameobjectName)
+                    {
+                        return go;
+                    }
+                }
+            }
+            // we don't have the gameobject cached!
+
+            if (recentlySearched.ContainsKey(gameobjectName))
+            {
+                if ((Time.time - (float)recentlySearched[gameobjectName]) < 1)
+                {
+                    return null; // we searched for it not long ago, so let's not bother now
+                }
+            }
+            cachedObjects.RemoveAll(x => !x);
+            GameObject foundObject = GameObject.Find(gameobjectName);
+            if (foundObject != null)
+                cachedObjects.Add(foundObject);
+            else
+            {
+                // if nul
+                if (recentlySearched.ContainsKey(gameobjectName))
+                    recentlySearched[gameobjectName] = Time.time; // we'll update our failed search
+                else
+                    recentlySearched.Add(gameobjectName, Time.time); // we'll add our failed search
+            }
+                
+            return foundObject;
+        }
         public GameObject GetStartLineObject()
         {
             return GameObject.FindGameObjectWithTag("Startline");
@@ -406,53 +429,16 @@ namespace ModLoaderSolution
             GameObject[] checkpoints = GameObject.FindGameObjectsWithTag("Checkpoint");
             return checkpoints;
         }
+        public static void PrintHierarchy(Transform parent, string indent = "")
+        {
+            Debug.Log(indent + parent.name);
 
-        //public void LoadMap(Mod mod)
-        //{
-        //    Utilities.Log("Utilities: Loading Mod " + mod.name);
-        //    UI_FreerideWorkshop ui = Get_UI_FreerideWorkshop();
-        //    ui.StartMod(mod);
-
-        //    //DevCommandsGameplay.LoadLevelFromSeed("1001");
-        //    //SessionManager sessionManager = Singleton<SessionManager>.SP;
-        //    //sessionManager.StartNewSession(mod);
-
-        //    //GameData gameData = FindObjectOfType<GameData>(); // loadedMod "Z{sz|~V"
-        //    //Mod loadedMod = (Mod)gameData.GetType().GetField("Z{sz|~V").GetValue(gameData);
-        //    //if (loadedMod != null)
-        //    //{
-        //    //    loadedMod.Unload();
-        //    //}
-        //    //mod.LoadAsync();
-        //    //Utilities.Log("Utilities: loaded mod " + mod.name);
-        //    //Utilities.Log("Utilities: loading scene");
-        //    //ModScene modScene = mod.scenes.FirstOrDefault<ModScene>();
-        //    //if (modScene != null)
-        //    //{
-        //    //    modScene.LoadAsync();
-        //    //}
-        //    //Utilities.Log("Utilities: loaded scene");
-
-        //}
-
-        //public void LoadMap(string seed)
-        //{
-        //    Utilities.Log("Utilities: Loading seed " + seed);
-        //    SessionManager sessionManager = Singleton<SessionManager>.SP;
-        //    //dZDR\u0081XK
-        //    //object gameMode = sessionManager.GetType().GetField("dZDR\u0081XK").GetValue(sessionManager);
-        //    //System.Type enumType = gameMode.GetType();
-        //    //System.Type enumUnderlyingType = System.Enum.GetUnderlyingType(enumType);
-        //    //System.Array enumValues = System.Enum.GetValues(enumType);
-
-        //    //for (int i = 0; i < enumValues.Length; i++)
-        //    //{
-        //    //    object value = enumValues.GetValue(i);
-        //    //    object underlyingValue = System.Convert.ChangeType(value, enumUnderlyingType);
-        //    //    Utilities.Log(underlyingValue);
-        //    //}
-        //    //sessionManager.StartNewSession(seed, global::GameMode.Sandbox);
-        //}
+            // Loop through all children and recursively print their hierarchy
+            foreach (Transform child in parent)
+            {
+                PrintHierarchy(child, indent + "  "); // Increase the indentation for children
+            }
+        }
 
         public void LogAllGameobjects()
         {
@@ -464,10 +450,15 @@ namespace ModLoaderSolution
         }
         public bool isInPauseMenu()
         {
+            Utilities.LogMethodCallStart();
             string[] menus = { "UI_Pause", "UI_Options", "UI_OptionsGameplay", "UI_OptionsVideo", "UI_OptionsAudio", "UI_OptionsKeyBindings", "UI_OptionsLanguages" };
             foreach(string menu in menus)
-                if (GameObject.Find(menu) != null)
+                if (Utilities.GameObjectFind(menu) != null)
+                {
+                    Utilities.LogMethodCallEnd();
                     return true;
+                }
+            Utilities.LogMethodCallEnd();
             return false;
         }
         public struct CustomPlayerInf
@@ -501,7 +492,10 @@ namespace ModLoaderSolution
             return null;
         }
 
-        public GameObject GetPlayer()
+        /// <summary>
+        /// Expect this method to return null often
+        /// </summary>
+        public static GameObject GetPlayer()
         {
             playerObject = Singleton<PlayerManager>.SP.GetPlayerObject();
             return playerObject;
@@ -564,7 +558,7 @@ namespace ModLoaderSolution
             //   label_rep #Untagged
             
             string trick = "";
-            GameObject go = GameObject.Find("label_specialStatus");
+            GameObject go = Utilities.GameObjectFind("label_specialStatus");
             if (go != null)
             {
                 Component[] components = go.GetComponentsInChildren<Component>();
@@ -600,13 +594,60 @@ namespace ModLoaderSolution
         }
         public static void Log(string log)
         {
+            if (NetClient.debugState == DebugType.DEBUG || NetClient.debugState == DebugType.DEVELOPER)
+            {
+                MethodBase caller = new StackFrame(1, false).GetMethod();
+                string prefix = caller.ReflectedType.FullName + "." + caller.Name;
+                Debug.Log(DateTime.Now.ToString("MM.dd.yyy HH:mm:ss.fff") + " - " + prefix + " - " + log);
+            }
+        }
+        public bool ModIsLoading()
+        {
+            return SceneManager.GetActiveScene().isLoaded;
+        }
+        static bool logMethodCalls = false;
+        static List<MethodBase> methods = new List<MethodBase>();
+        static List<float> methodsTimeCalled = new List<float>();
+        static Hashtable methodInfos = new Hashtable();
+        public static void LogMethodCallStart()
+        {
+            if (!logMethodCalls)
+                return;
+            MethodBase caller = new StackFrame(1, false).GetMethod();
+            methods.Add(caller);
+            methodsTimeCalled.Add(Time.time);
+        }
+        public static void LogMethodCallEnd()
+        {
+            if (!logMethodCalls)
+                return;
             MethodBase caller = new StackFrame(1, false).GetMethod();
             string prefix = caller.ReflectedType.FullName + "." + caller.Name;
-            if (NetClient.Instance != null)
-                NetClient.Instance.Log(DateTime.Now.ToString("MM.dd.yyy HH:mm:ss.fff") + " - " + prefix + " - " + log);
-            else
-                Debug.Log(DateTime.Now.ToString("MM.dd.yyy HH:mm:ss.fff") + " - " + prefix + " - " + log);
+            int i = methods.IndexOf(caller);
+            Utilities.Log(DateTime.Now.ToString("MM.dd.yyy HH:mm:ss.fff") + "\t" + prefix + " took " + (Time.time-methodsTimeCalled[i]) + "s");
+            try
+            {
+                float totalTimeSpent = (float)methodInfos[prefix];
+                methodInfos[prefix] = (Time.time - methodsTimeCalled[i]) + totalTimeSpent;
+            }
+            catch (KeyNotFoundException) {
+                methodInfos.Add(prefix, (Time.time - methodsTimeCalled[i]));
+            }
+            catch (NullReferenceException)
+            {
+                methodInfos.Add(prefix, (Time.time - methodsTimeCalled[i]));
+            }
+            methods.Remove(caller);
+            methodsTimeCalled.RemoveAt(i);
         }
+        public string GetCallStats()
+        {
+            string ret = "";
+            foreach(string key in methodInfos.Keys)
+                ret += key + " for " + methodInfos[key].ToString() + "s\n";
+            return ret;
+        }
+
         public string GetPlayerCurrentTrick()
         {
             //---UI_RepPopup : label_repCashIn #Untagged
@@ -622,7 +663,7 @@ namespace ModLoaderSolution
             //   label_rep #Untagged
 
             string trick = "";
-            GameObject go = GameObject.Find("label_repSource");
+            GameObject go = Utilities.GameObjectFind("label_repSource");
             if (go != null)
             {
                 Component[] components = go.GetComponentsInChildren<Component>();
@@ -655,7 +696,7 @@ namespace ModLoaderSolution
             //  --0 - panel : label_speed #Untagged
             //--km / h - panel : label_units #Untagged
             string rep = "0";
-            GameObject go = GameObject.Find("label_rep");
+            GameObject go = Utilities.GameObjectFind("label_rep");
             if (go != null)
             {
                 Component[] components = go.GetComponentsInChildren<Component>();
@@ -685,7 +726,7 @@ namespace ModLoaderSolution
                 return playerName;
 
             string name = "Unknown";
-            GameObject go = GameObject.Find("label_name");
+            GameObject go = Utilities.GameObjectFind("label_name");
             if (go != null)
             {
                 Component[] components = go.GetComponentsInChildren<Component>();
@@ -711,21 +752,20 @@ namespace ModLoaderSolution
 
         public string GetPlayerName()
         {
-            // playerName a^sXf\u0083Y;
             PlayerInfo player = Singleton<PlayerManager>.SP.GetPlayer();
-            return (string)player.GetType().GetField("a^sXf\u0083Y").GetValue(player);
+            return (string)player.GetType().GetField(ObfuscationHandler.GetObfuscated("playerName")).GetValue(player);
             //return player.playerName;
         }
 
         public string GetNameFromPlayerInfo(PlayerInfo pi)
         {
-            return (string)pi.GetType().GetField("a^sXf\u0083Y").GetValue(pi);
+            return (string)pi.GetType().GetField(ObfuscationHandler.GetObfuscated("playerName")).GetValue(pi);
             //return pi.playerName;
         }
         public string GetIdFromPlayerInfo(PlayerInfo pi)
         {
-            return (string)pi.GetType().GetField("r~x\u007fs{n").GetValue(pi);
-            //return pi.playerName;
+            return (string)pi.GetType().GetField("userID").GetValue(pi);
+            //return pi.userID;
         }
 
         public List<string> GetSpectateTargets()
@@ -745,16 +785,45 @@ namespace ModLoaderSolution
             GameObject player = GetPlayerFromId(id);
             if (player == null)
                 return;
-            FindObjectOfType<FollowCamSystem>().subject = player;
-            FindObjectOfType<FollowCamSystem>().bother = true;
+            if (Utilities.GameObjectFindObjectOfType<FollowCamSystem>().GetCameras().Count == 0)
+            {
+                // if there are no cameras, do a custom spectate
+                Utilities.GameObjectFindObjectOfType<FollowCamSystem>().subject = null;
+                Utilities.GameObjectFindObjectOfType<FollowCamSystem>().bother = false;
+                SpectatePlayerFromId(id);
+            }
+            else
+            {
+                Utilities.GameObjectFindObjectOfType<FollowCamSystem>().subject = player;
+                Utilities.GameObjectFindObjectOfType<FollowCamSystem>().bother = true;
+            }
         }
-        public void SpectatePlayer(int id)
+        public void SpectatePlayer(int index)
         {
-            DevCommandsCamera.Spectate(id);
+            Utilities.Log("SpectatePlayer(int " + index.ToString() + ")");
+            DevCommandsCamera.Spectate(index);
         }
-
+        public void SpectatePlayerFromId(string id)
+        {
+            Utilities.Log("SpectatePlayerFromId(string " + id.ToString() + ")");
+            PlayerInfo[] allPlayers = GetAllPlayers();
+            PlayerInfo player = null;
+            foreach (PlayerInfo pi in allPlayers)
+            {
+                if (GetIdFromPlayerInfo(pi).ToLower() == id.ToLower())
+                {
+                    player = pi;
+                    break;
+                }
+            }
+            if (player != null)
+                SpectatePlayer(Array.IndexOf(allPlayers, player));
+            else
+                Utilities.Log("Player not found: " + name);
+        }
         public void SpectatePlayer(string name)
         {
+            Utilities.Log("SpectatePlayer(string " + name.ToString() + ")");
             PlayerInfo[] allPlayers = GetAllPlayers();
             PlayerInfo player = null;
             foreach (PlayerInfo pi in allPlayers)
@@ -772,7 +841,7 @@ namespace ModLoaderSolution
         }
         public int GetBike()
         {
-            string oldBike = FindObjectOfType<BikeSwitcher>().oldBike;
+            string oldBike = Utilities.GameObjectFindObjectOfType<BikeSwitcher>().oldBike;
             if (oldBike == "downhill")
                 return 1;
             else if (oldBike == "hardtail")
@@ -783,11 +852,10 @@ namespace ModLoaderSolution
         {
             PlayerInfoImpact[] array = FindObjectsOfType<PlayerInfoImpact>();
             PlayerCustomization[] array2 = FindObjectsOfType<PlayerCustomization>();
-            GameData gameData = FindObjectOfType<GameData>();
+            GameData gameData = Utilities.GameObjectFindObjectOfType<GameData>();
             BikeType[] array3 = (BikeType[])gameData.GetType().GetField("bx}n\u0080PQ").GetValue(gameData);
             foreach (PlayerInfoImpact playerInfoImpact in array)
             {
-                Debug.Log(steam_id);
                 playerInfoImpact.GetType().GetField("dzQf\u0082nw").SetValue(playerInfoImpact, array3[bike]);
             }
             foreach (PlayerCustomization playerCustomization in array2)
@@ -810,12 +878,12 @@ namespace ModLoaderSolution
             // bikeType = GameData.SP.bikeTypes[num];
             //dzQf\u0082nw = GameData.[~qsVD|.bx}n\u0080PQ[cVpqe^E];
 
-            // playerInfoImpact.bikeType = FindObjectOfType<GameData>().bikeTypes[bike];
-            BikeType[] bikeTypes = (BikeType[])typeof(GameData).GetField("bx}n\u0080PQ").GetValue(FindObjectOfType<GameData>());
-            typeof(PlayerInfoImpact).GetField("dzQf\u0082nw").SetValue(playerInfoImpact, bikeTypes[bike]);
+            // playerInfoImpact.bikeType = Utilities.GameObjectFindObjectOfType<GameData>().bikeTypes[bike];
+            BikeType[] bikeTypes = (BikeType[])typeof(GameData).GetField(ObfuscationHandler.GetObfuscated("bikeTypes")).GetValue(Utilities.GameObjectFindObjectOfType<GameData>());
+            typeof(PlayerInfoImpact).GetField(ObfuscationHandler.GetObfuscated("bikeType")).SetValue(playerInfoImpact, bikeTypes[bike]);
 
             // playerCustomization = hUP\u007fi\u0084d
-            PlayerCustomization playerCustomization = (PlayerCustomization)typeof(PlayerInfoImpact).GetField("hUP\u007fi\u0084d").GetValue(playerInfoImpact);
+            PlayerCustomization playerCustomization = (PlayerCustomization)typeof(PlayerInfoImpact).GetField(ObfuscationHandler.GetObfuscated("playerCustomization")).GetValue(playerInfoImpact);
             playerCustomization.RefreshBikeMesh();
         }
         public string GetBikeName(int bike)
@@ -827,6 +895,14 @@ namespace ModLoaderSolution
                 name = "Hardtail";
             return name;
         }
+        public int GetBikeInt(string bike)
+        {
+            if (bike.ToLower() == "downhill")
+                return 1;
+            if (bike.ToLower() == "hardtail")
+                return 2;
+            return 0;
+        }
         public void PopUp(string titleText, string bodyText)
         {
             int lineLimit = 12;
@@ -836,12 +912,12 @@ namespace ModLoaderSolution
                     lines++;
             if (lines > lineLimit)
                 return;
-            UI_PopUp_TextBoxSmall uI_PopUp_TextBoxSmall = FindObjectOfType<PermaGUI>().SpawnPopUp<UI_PopUp_TextBoxSmall>();
+            UI_PopUp_TextBoxSmall uI_PopUp_TextBoxSmall = Utilities.GameObjectFindObjectOfType<PermaGUI>().SpawnPopUp<UI_PopUp_TextBoxSmall>();
             // label_titleText = f`r}tXQ
-            TMPro.TextMeshProUGUI label_titleText = (TMPro.TextMeshProUGUI)uI_PopUp_TextBoxSmall.GetType().GetField("f`r}tXQ").GetValue(uI_PopUp_TextBoxSmall);
+            TMPro.TextMeshProUGUI label_titleText = (TMPro.TextMeshProUGUI)uI_PopUp_TextBoxSmall.GetType().GetField(ObfuscationHandler.GetObfuscated("label_titleText")).GetValue(uI_PopUp_TextBoxSmall);
             label_titleText.text = titleText;
             // label_bodyText = oZtLHbT
-            TMPro.TextMeshProUGUI label_bodyText = (TMPro.TextMeshProUGUI)uI_PopUp_TextBoxSmall.GetType().GetField("oZtLHbT").GetValue(uI_PopUp_TextBoxSmall);
+            TMPro.TextMeshProUGUI label_bodyText = (TMPro.TextMeshProUGUI)uI_PopUp_TextBoxSmall.GetType().GetField(ObfuscationHandler.GetObfuscated("label_bodyText")).GetValue(uI_PopUp_TextBoxSmall);
             label_bodyText.text = bodyText;
         }
         public void SetCameraTarget(PlayerInfoImpact player, bool something=true)
@@ -903,8 +979,8 @@ namespace ModLoaderSolution
         }
         public void DisableAllBendGoals()
         {
-            GameObject.Find("BendGoal_Left").SetActive(false);
-            GameObject.Find("BendGoal_Right").SetActive(false);
+            Utilities.GameObjectFind("BendGoal_Left").SetActive(false);
+            Utilities.GameObjectFind("BendGoal_Right").SetActive(false);
         }
         public void ForceBail(Transform transform)
         {
@@ -1044,13 +1120,13 @@ namespace ModLoaderSolution
         }
         public void SwitchSpectate()
         {
-            MultiManager mm = MonoBehaviour.FindObjectOfType<MultiManager>();
+            MultiManager mm = FindObjectOfType<MultiManager>();
             mm.SwitchToSpectate();
             Utilities.Log("utilities.SwitchSpectate");
         }
         public void ToggleSpectator()
         {
-            MultiManager mm = MonoBehaviour.FindObjectOfType<MultiManager>();
+            MultiManager mm = Utilities.GameObjectFindObjectOfType<MultiManager>();
             mm.ToggleSpectator();
             Utilities.Log("utilities.SwitchSpectate");
         }

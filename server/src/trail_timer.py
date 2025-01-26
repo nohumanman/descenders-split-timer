@@ -50,8 +50,9 @@ class TrailTimer():
         # if we were out of bounds and are in a run
         if len(self.__boundaries) == 0 and self.timer_info.started:
             # note we cannot verify this user instantly
+            if self.timer_info.auto_verify:
+                await self.network_player.send("SPLIT_TIME|Time requires review")
             self.timer_info.auto_verify = False
-            await self.network_player.send("SPLIT_TIME|Time requires review")
         if boundary_guid not in self.__boundaries:
             self.__boundaries.append(boundary_guid)
 
@@ -64,8 +65,9 @@ class TrailTimer():
         if len(self.__boundaries) == 0:
             if self.timer_info.started:
                 # note we cannot verify this user instantly
+                if self.timer_info.auto_verify:
+                    await self.network_player.send("SPLIT_TIME|Time requires review")
                 self.timer_info.auto_verify = False
-                await self.network_player.send("SPLIT_TIME|Time requires review")
 
     def reset_boundaries(self):
         """
@@ -83,12 +85,14 @@ class TrailTimer():
         self.timer_info.auto_verify = True
         self.timer_info.starting_speed = 0
         if len(self.__boundaries) == 0:
-            await self.invalidate_timer("OUT OF BOUNDS!", always=True)
-        else:
-            self.timer_info.started = True
-            self.timer_info.total_checkpoints = total_checkpoints
-            self.timer_info.time_started = time.time()
-            self.timer_info.times = []
+            if self.timer_info.auto_verify:
+                await self.network_player.send("SPLIT_TIME|Time requires review")
+            self.timer_info.auto_verify = False
+                
+        self.timer_info.started = True
+        self.timer_info.total_checkpoints = total_checkpoints
+        self.timer_info.time_started = time.time()
+        self.timer_info.times = []
 
     async def checkpoint(self, client_time: float, checkpoint_hash: str):
         """Log a checkpoint."""
@@ -104,22 +108,24 @@ class TrailTimer():
             self.__checkpoints.append(checkpoint_hash)
             self.timer_info.times.append(float(client_time))
 
-            wr = await self.network_player.dbms.get_fastest_split_times(
+            wr = await self.network_player.dbms.get_global_best_checkpoint_times(
                 self.trail_name
             )
-            pb = await self.network_player.dbms.get_personal_fastest_split_times(
+            pb = await self.network_player.dbms.get_personal_best_checkpoint_times(
                 self.trail_name, self.network_player.info.steam_id
             )
 
+            total_checkpoints = self.timer_info.total_checkpoints - 1
             index = len(self.timer_info.times) - 1
-            time_diff = (
-                wr[index] - float(client_time) if index < len(wr)
-                else 0
-            )
-            time_diff_local = (
-                pb[index] - float(client_time) if index < len(pb)
-                else 0
-            )
+            if total_checkpoints == len(wr):
+                time_diff = wr[index] - float(client_time)
+            else:
+                time_diff = None
+
+            if total_checkpoints == len(pb):
+                time_diff_local = pb[index] - float(client_time)
+            else:
+                time_diff_local = None
 
             mess = self.calculate_split_message(time_diff, time_diff_local, client_time)
             await self.network_player.send(f"SPLIT_TIME|{mess}")
@@ -128,21 +134,23 @@ class TrailTimer():
         """Calculate split time message."""
         mess = ""
 
-        if time_diff > 0:
-            mess += f"<color=lime>-{round(abs(time_diff), 3)}</color>"
+        if time_diff is None:
+            pass
+        elif time_diff > 0:
+            mess += f"<color=lime>-{round(abs(time_diff), 3)}</color> WR"
+        elif time_diff == 0:
+            mess += f"<color=orange>+{round(abs(time_diff), 3)}</color> WR"
         elif time_diff < 0:
-            mess += f"<color=red>+{round(abs(time_diff), 3)}</color>"
+            mess += f"<color=red>+{round(abs(time_diff), 3)}</color> WR"
 
-        if time_diff != 0:
-            mess += " WR"
-
-        if time_diff_local > 0:
-            mess += f"  <color=lime>-{round(abs(time_diff_local), 3)}</color>"
+        if time_diff_local is None:
+            pass
+        elif time_diff_local > 0:
+            mess += f"  <color=lime>-{round(abs(time_diff_local), 3)}</color> PB"
+        elif time_diff_local == 0:
+            mess += f"  <color=orange>+{round(abs(time_diff_local), 3)}</color> PB"
         elif time_diff_local < 0:
-            mess += f"  <color=red>+{round(abs(time_diff_local), 3)}</color>"
-
-        if time_diff_local != 0:
-            mess += " PB"
+            mess += f"  <color=red>+{round(abs(time_diff_local), 3)}</color> PB"
 
         if not mess:
             mess = self.secs_to_str(float(client_time))
@@ -168,18 +176,16 @@ class TrailTimer():
     async def can_end(self) -> bool:
         """ Check if the data is valid to be able to end the timer """
         errors = {
-            "ERR001: Out of Bounds":
-                lambda: len(self.__boundaries) == 0,
-            "ERR002: Too many checkpoints":
-                lambda: len(self.timer_info.times) > self.timer_info.total_checkpoints-1,
-            "ERR003: Not enough checkpoints":
-                lambda: len(self.timer_info.times) < self.timer_info.total_checkpoints-1,
+            "ERR006: Timer not started":
+                lambda: not self.timer_info.started,
             "ERR004: No times logged":
                 lambda: len(self.timer_info.times) == 0,
             "ERR005: Time is negative":
                 lambda: self.timer_info.times[len(self.timer_info.times)-1] < 0,
-            "ERR006: Didn't start timer":
-                lambda: not self.timer_info.started,
+            "ERR002: Too many checkpoints":
+                lambda: len(self.timer_info.times) > self.timer_info.total_checkpoints-1,
+            "ERR003: Not enough checkpoints":
+                lambda: len(self.timer_info.times) < self.timer_info.total_checkpoints-1,
             "ERR007: Client time did not match server time":
                 lambda: not(
                     (
@@ -207,17 +213,21 @@ class TrailTimer():
         # reset the timer
         was_started = self.timer_info.started
         self.timer_info.started = False
+        spectated_by = None
+        for player in self.network_player.parent.players:
+            if str(player.info.spectating_id) == str(self.network_player.info.steam_id):
+                spectated_by = str(player.info.steam_id)
         # submit the time to the database
         time_id = await self.network_player.dbms.submit_time(
             self.network_player.info.steam_id,
             self.timer_info.times,
             self.trail_name,
             self.network_player.info.world_name,
-            self.network_player.info.bike_type,
+            self.network_player.info.bike_id,
             self.timer_info.starting_speed,
             self.network_player.info.version,
-            self.timer_info.auto_verify and can_end[0],
-            not can_end[0]
+            "",
+            self.timer_info.auto_verify and can_end[0]
         )
         # ask client to upload replay
         await self.network_player.send(f"UPLOAD_REPLAY|{time_id}")
@@ -234,7 +244,12 @@ class TrailTimer():
             try:
                 if self.network_player.info.steam_id in [network_player.info.spectating_id for network_player in self.network_player.parent.players]:
                     connection = twitch_chat_irc.TwitchChatIRC('nohumanman', TWITCH_TOKEN)
-                    connection.send("bbb171", f"{secs_str} 🚗💨") # change to send to self.network_player.info.twitch_channel
+                    connection.send("bbb171", f"{secs_str} 🚴‍♂️💨") # change to send to self.network_player.info.twitch_channel
+                    # this should serve as a log of times
+                    time_url = f"https://modkit.nohumanman.com/time/{time_id}"
+                    await self.network_player.parent.get_discord_bot().new_fastest_time(
+                        f"🔥 [{secs_str} - {self.network_player.info.steam_name}]({time_url})"
+                    )
             except Exception as e:
                 logging.error(f"Failed to send message to twitch chat: {e}")
         asyncio.create_task(twitch_notif())
@@ -242,11 +257,11 @@ class TrailTimer():
             if not self.timer_info.auto_verify:
                 await asyncio.sleep(2)
                 await self.network_player.send(
-                        "POPUP|Time requires verification|Great! You've completed"
-                        f" a time of {secs_str}, but for it to show up on leaderboards,"
-                        " it needs to be verified by a moderator. You can ask for a"
-                        " verification in the #races channel on the Descenders"
-                        " Competitive Discord server if you think your run is valid."
+                        f"POPUP|Verification Required|Your time of {secs_str}"
+                        " can be verified if it is a legal run with no cuts."
+                        " You can ask for verification in the #request-verification"
+                        " channel on the Descenders Competitive Discord server."
+                        f" Please only do this if you know your run is valid. ID{time_id}"
                 )
         asyncio.create_task(send_popup())
         if can_end[0]:
@@ -260,11 +275,11 @@ class TrailTimer():
 
         async def discord_notif():
             # send the time to the discord server if it is a new fastest time
-            global_fastest = await self.network_player.dbms.get_fastest_split_times(self.trail_name)
+            global_fastest = await self.network_player.dbms.get_global_best_checkpoint_times(self.trail_name)
             if client_time < global_fastest[len(global_fastest)-1] and self.timer_info.auto_verify and can_end[0]:
                 await self.__new_fastest_time(secs_str)
             # send the time to the discord server if it is a new fastest time
-            our_fastest = await self.network_player.dbms.get_personal_fastest_split_times(
+            our_fastest = await self.network_player.dbms.get_personal_best_checkpoint_times(
                 self.trail_name,
                 self.network_player.info.steam_id
             )
@@ -286,12 +301,13 @@ class TrailTimer():
                     f"<@&1166081385732259941> Please verify [the new pb time]({time_url}) on "
                     f"'{self.trail_name}' by '{self.network_player.info.steam_name}' of {secs_str}"
                 )
-        asyncio.create_task(discord_notif())
+        
         # update the leaderboards and medals on connected clients
         async def update():
             await self.update_leaderboards()
             await self.update_medals()
         asyncio.create_task(update())
+        await discord_notif()
         self.timer_info.auto_verify = True
 
     async def potential_cheat(self, client_time: float):

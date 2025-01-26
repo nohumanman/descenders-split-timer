@@ -57,13 +57,16 @@
     <Compile Include="ButtonHack.cs" />
     <Compile Include="ChaosMod.cs" />
     <Compile Include="Chat.cs" />
+    <Compile Include="CustomDiscordManager.cs" />
     <Compile Include="CustomTeleporter.cs" />
     <Compile Include="CustomDebug.cs" />
     <Compile Include="DisableOnAny.cs" />
+    <Compile Include="ErrorLogger.cs" />
     <Compile Include="FollowCamSystem.cs" />
     <Compile Include="Init.cs" />
     <Compile Include="Loader.cs" />
     <Compile Include="Modifiers\CameraModifier.cs" />
+    <Compile Include="Modifiers\FovModifier.cs" />
     <Compile Include="Modifiers\GimbalCam.cs" />
     <Compile Include="Modifiers\MovableCam.cs" />
     <Compile Include="Modifiers\RainbowLight.cs" />
@@ -72,6 +75,7 @@
     <Compile Include="Modifiers\StatsModification.cs" />
     <Compile Include="Modifiers\TimeModifier.cs" />
     <Compile Include="NetClient.cs" />
+    <Compile Include="ObfuscationHandler.cs" />
     <Compile Include="ObjEnabler.cs" />
     <Compile Include="PlayerManagement.cs" />
     <Compile Include="RidersGate.cs" />

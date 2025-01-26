@@ -1,0 +1,34 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: Build ModLoaderSolution
+
+on:
+  push:
+    branches: [ "dev" ]
+    paths:
+      - 'mod-loader-solution/*'
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'mod-loader-solution/*'
+
+jobs:
+  build:
+    runs-on: windows-2019
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: Build DotNET35
+        run: |
+          cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\"
+          $output = & .\MSBuild.exe $Env:GITHUB_WORKSPACE\mod-loader-solution\ModLoaderSolution.sln /p:WarningsAsErrors=true /p:WarningLevel=4  /nologo /v:q
+
+          # Print the output
+          Write-Output $output
+
+          # Check for warnings/errors and exit accordingly
+          if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+          }
+

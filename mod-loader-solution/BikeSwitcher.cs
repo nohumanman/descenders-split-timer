@@ -17,9 +17,14 @@ namespace ModLoaderSolution
             Utilities.Log("id " + id + " switching to bike '" + bike + "'");
             if (Utilities.instance.isInReplayMode())
                 return;
+            if (id == (new PlayerIdentification.SteamIntegration()).getSteamId())
+            {
+                // if it's us, let the server know
+                PlayerManagement.Instance.OnBikeSwitch(bike);
+            }                
             StartCoroutine(_ToBike(bike, id));
         }
-        public string GetBike(){
+        public static string GetBike(){
             int pref = FindObjectOfType<PrefsManager>().GetInt("PREFERREDBIKE");
             if (pref == 1)
                 return "downhill";
@@ -29,37 +34,21 @@ namespace ModLoaderSolution
         }
         IEnumerator _ToBike(string bike, string id)
         {
+            Utilities.LogMethodCallStart();
             GameObject PlayerObject = Utilities.GetPlayerFromId(id);
             if (PlayerObject != null)
             {
                 GameObject BikeObject = GetBikeObject(PlayerObject);
-                while (BikeObject == null)
-                {
-                    if (id == (new PlayerIdentification.SteamIntegration()).id.steamID)
-                    {
-                        BikeObject = GetBikeObject(PlayerObject);
-                    }
-                    yield return new WaitForEndOfFrame();
-                }
+                // if it wasn't a descenders bike and is now a descenders bike
                 if (!IsDescBike(oldBike) && IsDescBike(bike))
                     yield return DelicatePlayerRespawn(id, PlayerObject, Utilities.GetPlayerInfoImpactFromId(id));
-                
-                if (bike == "enduro")
-                {
-                    FindObjectOfType<PrefsManager>().SetInt("PREFERREDBIKE", 0);
-                    //gameObject.GetComponent<Utilities>().SetBike(0);
-                    Utilities.instance.SetBike(Utilities.GetPlayerInfoImpactFromId(id), 0);
-                }
-                else if (bike == "downhill")
-                {
-                    FindObjectOfType<PrefsManager>().SetInt("PREFERREDBIKE", 1);
-                    Utilities.instance.SetBike(Utilities.GetPlayerInfoImpactFromId(id), 1);
-                }
-                else if (bike == "hardtail")
-                {
-                    FindObjectOfType<PrefsManager>().SetInt("PREFERREDBIKE", 2);
-                    Utilities.instance.SetBike(Utilities.GetPlayerInfoImpactFromId(id), 2);
-                }
+                int bikeType = Utilities.instance.GetBikeInt(bike);
+                // if it's us, set our preferred bike
+                if (id == (new PlayerIdentification.SteamIntegration()).getSteamId())
+                    FindObjectOfType<PrefsManager>().SetInt("PREFERREDBIKE", bikeType);
+                Utilities.instance.SetBike(Utilities.GetPlayerInfoImpactFromId(id), bikeType);
+                // TEMPORARILY REMOVED NON-DESCENDERS BIKES 28.05.2024
+                /*
                 else
                 {
                     if (AssetBundling.Instance.bundle != null)
@@ -87,7 +76,7 @@ namespace ModLoaderSolution
                             // replace gestures
                             Gesture[] gestures = new Gesture[0] { };
                             string gesturesField = "EL\u0080\u007f\u0084\u0080o";
-                            gestures = (Gesture[])typeof(Cyclist).GetField(gesturesField).GetValue(Utilities.instance.GetPlayer().GetComponent<Cyclist>());
+                            gestures = (Gesture[])typeof(Cyclist).GetField(gesturesField).GetValue(Utilities.GetPlayer().GetComponent<Cyclist>());
                             foreach (Gesture gesture in gestures)
                             {
                                 // change gesture animations here!
@@ -95,7 +84,7 @@ namespace ModLoaderSolution
                             }
                             // replace gestures
                             typeof(Cyclist).GetField(gesturesField).SetValue(
-                                Utilities.instance.GetPlayer().GetComponent<Cyclist>(),
+                                Utilities.GetPlayer().GetComponent<Cyclist>(),
                                 gestures
                             );
                         }
@@ -111,13 +100,9 @@ namespace ModLoaderSolution
                     else
                         throw new System.Exception("AssetBundle not loaded! Can't load into specialised demo!!");
                 }
+                */
             }
-            // if the player is us, tell the server
-            if (id == (new PlayerIdentification.SteamIntegration().id).ToString())
-            {
-                PlayerManagement.Instance.OnBikeSwitch(oldBike, bike);
-                oldBike = bike;
-            }
+            Utilities.LogMethodCallEnd();
         }
         public Animator GetPlayerAnim(GameObject PlayerObject)
         {
@@ -153,7 +138,7 @@ namespace ModLoaderSolution
         }
         IEnumerator DelicatePlayerRespawn(string id, GameObject Player, PlayerInfoImpact playerInfoImpact)
         {
-            // Player = Utilities.instance.GetPlayer()
+            // Player = Utilities.GetPlayer()
             Vector3 pos = Player.transform.position;
             Vector3 rot = Player.transform.eulerAngles;
             Destroy(Player);

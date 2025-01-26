@@ -7,12 +7,13 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace ModLoaderSolution
 {
 	public enum DebugType
     {
-		DEBUG, RELEASE
+		DEVELOPER, DEBUG, RELEASE
     }
 	public class NetClient : MonoBehaviour {
 		public static NetClient Instance { get; private set; }
@@ -23,12 +24,14 @@ namespace ModLoaderSolution
 		bool PlayerCollision = false;
 		List<string> messages = new List<string>();
 		public int port = 65432;
-		public string ip = "18.132.81.187";
-		static string version = "0.2.57";
-		static string patchNotes = "- Fix camera when in shed\n- Fix freecam\n- Fix non-standard characters breaking leaderboards\n\nYours,\n- nohumanman"; // that which has changed since the last version.
-		public static bool developerMode = false;
-		void Awake(){
-			if (developerMode)
+		public string ip = "86.26.185.112";
+		static string version = "0.3.01";
+		static bool quietUpdate = false;
+		static string patchNotes = "- Errors caused by descenders update should be resolved\n- Framerate should be improved\n- Ragesquid should push new fix sometime 09-08\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
+		public static DebugType debugState = DebugType.RELEASE;
+        void Awake(){
+			Utilities.LogMethodCallStart();
+			if (debugState == DebugType.DEVELOPER)
 				ip = "localhost";
 			DontDestroyOnLoad(this.gameObject.transform.root);
 			if (Instance != null && Instance != this) 
@@ -38,15 +41,19 @@ namespace ModLoaderSolution
 			this.gameObject.AddComponent<Utilities>();
 			Utilities.Log("Version number " + version);
 			Application.logMessageReceived += Log;
+			Utilities.LogMethodCallEnd();
 		}
 		public static string GetVersion()
         {
-			if (developerMode)
+			if (debugState == DebugType.DEVELOPER)
 				return version + "-dev";
+			else if (debugState == DebugType.DEBUG)
+				return version + "-debug";
 			else
 				return version;
         }
 		void Start () {
+            Utilities.LogMethodCallStart();
 			Utilities.Log("Connecting to tcp server port " + port.ToString() + " with ip '" + ip + "'");
 			ConnectToTcpServer();
 			ridersGates = FindObjectsOfType<RidersGate>();
@@ -54,18 +61,17 @@ namespace ModLoaderSolution
             {
 				Utilities.instance.ToggleGod();
             }
+			Utilities.LogMethodCallEnd();
 		}
 		public bool IsConnected()
         {
 			return socketConnection != null && socketConnection.Connected;
 		}
 		bool poppedUp = false;
-		bool introSequenceWasHere = false;
 		void Update()
         {
-			if (!introSequenceWasHere && GameObject.Find("Map_Name") != null)
-				introSequenceWasHere = true;
-			if (!poppedUp && GameObject.Find("Map_Name") == null && introSequenceWasHere)
+            Utilities.LogMethodCallStart();
+			if (!poppedUp && Utilities.GetPlayer() != null)
             {
 				string lastVersion = "";
 				try
@@ -74,7 +80,7 @@ namespace ModLoaderSolution
 				}
 				catch(Exception){
 				}
-				if (lastVersion != NetClient.version)
+				if (lastVersion != NetClient.version && !quietUpdate)
                 {
 					try
 					{
@@ -115,8 +121,10 @@ namespace ModLoaderSolution
 				messages.Clear();
 			}
 			catch (InvalidOperationException){}
+			Utilities.LogMethodCallEnd();
 		}
 		private void ConnectToTcpServer () {
+			Utilities.LogMethodCallStart();
 			Utilities.Log("Connecting to TCP Server");
 			hasStarted = Time.time;
 			try {
@@ -128,17 +136,19 @@ namespace ModLoaderSolution
 			catch (Exception e) {
 				Utilities.Log("On client connect exception " + e); 		
 			}
+			Utilities.LogMethodCallEnd();
 		}
 		public void Log(string logString, string stackTrace, LogType type)
 		{
-			SendData("LOG_LINE|" + logString);
+			//SendData("LOG_LINE", logString);
 		}
 		public void Log(string logString)
         {
-			SendData("LOG_LINE|" + logString);
+			//SendData("LOG_LINE", logString);
         }
 		public IEnumerator UploadOutputLog()
 		{
+			Utilities.LogMethodCallStart();
 			string replayLocation = (
 				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
 				+ "Low\\RageSquid\\Descenders\\output_log.txt"
@@ -165,9 +175,11 @@ namespace ModLoaderSolution
 					Utilities.Log("Upload complete!");
 				}
 			}
+			Utilities.LogMethodCallEnd();
 		}
 		public IEnumerator UploadReplay(string replay, string time_id)
         {
+			Utilities.LogMethodCallStart();
 			Byte[] bytes = System.IO.File.ReadAllBytes(replay);
 			System.IO.File.Delete(replay);
 
@@ -191,8 +203,10 @@ namespace ModLoaderSolution
 					Utilities.Log("Upload complete!");
 				}
 			}
-        }
+			Utilities.LogMethodCallEnd();
+		}
 		private void ListenForData() {
+			Utilities.LogMethodCallStart();
 			try {
 				Utilities.Log("Creating TcpClient()");
 				socketConnection = new TcpClient(ip, port);
@@ -215,28 +229,37 @@ namespace ModLoaderSolution
 			catch {             
 				Utilities.Log("Socket exception in ListenForData()");         
 			}
+			Utilities.LogMethodCallEnd();
 		}
 		public void NetStart()
         {
+			Utilities.LogMethodCallStart();
 			PlayerManagement.Instance.NetStart();
 			foreach (MedalSystem medalSystem in FindObjectsOfType<MedalSystem>())
 				medalSystem.NetStart();
-			this.SendData("REP|" + Utilities.instance.GetPlayerTotalRep());
+			this.SendData("REP", Utilities.instance.GetPlayerTotalRep());
 			foreach (Boundary b in FindObjectsOfType<Boundary>())
 				b.ForceUpdate(); // force tell the server what boundaries we are in.
+			Utilities.LogMethodCallEnd();
 		}
 		private void MessageRecieved(string message) {
+			Utilities.LogMethodCallStart();
 			if (message == "")
 				return;
 			Utilities.Log("Message Recieved: " + message);
 			if (message == "SUCCESS") {
 				NetStart();
 			}
+            if (message.StartsWith("RECEIVED"))
+            {
+                // not waiting for a response anymore
+                hashesAwaiting.Remove(message.Split('|')[1]);
+            }
 			if (message.StartsWith("ROTATE|"))
             {
 				string rotate = message.Split('|')[1];
 				int rotateInt = int.Parse(rotate);
-				GameObject.Find("Player_Human").transform.Rotate(new Vector3(0, rotateInt, 0));
+				Utilities.GetPlayer().transform.Rotate(new Vector3(0, rotateInt, 0));
 			}
 			if (message.StartsWith("UPLOAD_REPLAY"))
             {
@@ -250,9 +273,9 @@ namespace ModLoaderSolution
 			}
 			if (message.StartsWith("GET_POS"))
             {
-				Vector3 pos = Utilities.instance.GetPlayer().transform.position;
+				Vector3 pos = Utilities.GetPlayer().transform.position;
 				Utilities.Log("Current Position: " + pos.ToString());
-				SendData("POS|" + pos.x + "|" + pos.y + "|" + pos.z);
+				SendData("POS", pos.x, pos.y, pos.z);
             }
 			
 			if (message.StartsWith("CHAT_MESSAGE"))
@@ -422,6 +445,20 @@ namespace ModLoaderSolution
 				string modifier = message.Split('|')[1];
 				Utilities.instance.AddGameModifier(modifier);
 			}
+			if (message.StartsWith("NON_MODKIT_TRAIL"))
+            {
+				string url = message.Split('|')[1];
+				bool proceed = true;
+				foreach (Trail trail in FindObjectsOfType<Trail>())
+					if (trail.url == url)
+						proceed = false;
+				if (proceed)
+                {
+					GameObject trailParent = GameObject.CreatePrimitive(PrimitiveType.Cube);
+					Trail tr = trailParent.AddComponent<Trail>();
+					tr.LoadFromUrl("https://modkit.nohumanman.com/static/trails/" + url);
+				}
+			}
 			if (message.StartsWith("SPLIT_TIME"))
             {
 				string splitTime = message.Split('|')[1];
@@ -446,6 +483,7 @@ namespace ModLoaderSolution
 				SplitTimerText.Instance.count = false;
 				SplitTimerText.Instance.SetText(reason);
 				SplitTimerText.Instance.text.color = Color.red;
+				StopCoroutine("DisableTimerText");
 				StartCoroutine(SplitTimerText.Instance.DisableTimerText(5));
 			}
 			if (message.StartsWith("CUT_BRAKES"))
@@ -477,7 +515,7 @@ namespace ModLoaderSolution
             }
 			if (message.StartsWith("GET_REP"))
             {
-				this.SendData("REP|" + Utilities.instance.GetPlayerTotalRep());
+				this.SendData("REP", Utilities.instance.GetPlayerTotalRep());
 			}
 			if (message.StartsWith("SEND_OUTPUTLOG"))
             {
@@ -509,7 +547,8 @@ namespace ModLoaderSolution
 				string code = message.Split('|')[1];
 				DevCommandsGameplay.LockItem(int.Parse(code));
 			}
-			SendData("pong");
+			_SendData("pong", "");
+			Utilities.LogMethodCallEnd();
 		}
 		IEnumerator SendDataDelayed(string clientMessage, float time)
         {
@@ -520,19 +559,48 @@ namespace ModLoaderSolution
         {
 			foreach (char c in mess)
 			{
-				if (c < 32 || c > 126 || c == '|' || c == '\n')
+				if (c < 32 || c > 126)
 					mess = mess.Replace(c.ToString(), "?");
 			}
 			return mess;
 		}
-		public void SendData(params string[] data)
+        static string ComputeSha256Hash(string rawData)
+        {
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+                return builder.ToString();
+            }
+        }
+        public List<string> hashesAwaiting = new List<string>();
+        IEnumerator WaitForHash(string hashToWaitFor, string message)
+        {
+            yield return new WaitForSeconds(10f);
+            if (hashesAwaiting.Contains(hashToWaitFor))
+            {
+                _SendData(message, hashToWaitFor); // we failed, so we will try again.
+                hashesAwaiting.Remove(hashToWaitFor); // and forget about it
+            }
+        }
+        public void SendData(params object[] data)
         {
 			string clientMessage = "";
-			foreach (string arg in data)
-				clientMessage += clean(arg) + "|";
-			SendData(clientMessage);
+			foreach (object arg in data) 
+				clientMessage += clean(arg.ToString()) + "|";
+            clientMessage += Time.time + "|"; // so no hashes are the same
+            string hash = ComputeSha256Hash(clientMessage);
+            clientMessage += hash;
+            hashesAwaiting.Add(hash);
+            StartCoroutine(WaitForHash(hash, clientMessage));
+            _SendData(clientMessage, hash);
         }
-		public void SendData(string clientMessage) {
+		void _SendData(string clientMessage, string hash) {
+			Utilities.LogMethodCallStart();
 			// Utilities.Log("Client sending message: " + clientMessage);
 			// clean clientMessage
 			if (!clientMessage.EndsWith("\n"))
@@ -540,24 +608,27 @@ namespace ModLoaderSolution
 			if (socketConnection == null || !socketConnection.Connected)
 			{
 				StartCoroutine(SendDataDelayed(clientMessage, 1)); // wait a second
+                if (hash != "")
+                    hashesAwaiting.Remove(hash); // not going to get a response from this one
 				return;
-			}
-			try
-			{
-				NetworkStream stream = socketConnection.GetStream();
-				if (stream.CanWrite)
-				{
-					byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);
-					stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-					stream.Flush(); // Ensure data is flushed immediately (prevent truncation)
-				}
-			}
-			catch (SocketException socketException)
-			{
-				Utilities.Log("Socket exception: " + socketException);
-			}
+            }
+            try
+            {
+                NetworkStream stream = socketConnection.GetStream();
+                if (stream.CanWrite)
+                {
+                    byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);
+                    stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
+                    stream.Flush(); // Ensure data is flushed immediately (prevent truncation)
+                }
+            }
+            catch (SocketException socketException)
+            {
+                Utilities.Log("Socket exception: " + socketException);
+            }
+			Utilities.LogMethodCallEnd();
 		}
-		public void OnDestroy()
+        public void OnDestroy()
 		{
 			SendData("MAP_EXIT");
 			if (socketConnection != null)

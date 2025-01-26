@@ -38,8 +38,10 @@ namespace ModLoaderSolution
         }
         public void LoadBundle(string bundlePath)
         {
+            Utilities.LogMethodCallStart();
             bundle = AssetBundle.LoadFromFile(bundlePath);
             OnBundleLoad();
+            Utilities.LogMethodCallEnd();
         }
         public void OnBundleLoad()
         {
@@ -73,11 +75,6 @@ namespace ModLoaderSolution
                         childs_child.gameObject.AddComponent<TimerCopier>();
                 }
             }
-
-            GameObject IntroSeq = bundle.LoadAsset<GameObject>("IntroSequence");
-            Instantiate(IntroSeq).AddComponent<DisableOnAny>();
-            GameObject.Find("Map_Name").GetComponent<Text>().text = " You are using the Descenders Modkit ";
-            GameObject.Find("Description").GetComponent<Text>().text = "- TAB to open bike switcher\n- CTRL-I to open stats modification\n- Quit the game to remove this mod\n\nFor more info go to split-timer.nohumanman.com/info";
         }
         void Start()
         {

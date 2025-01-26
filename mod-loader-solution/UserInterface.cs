@@ -15,7 +15,6 @@ namespace ModLoaderSolution
     public class UserInterface : MonoBehaviour {
         public GUIStyle customButton;
         bool isActive;
-        bool hasBeenActive = false;
         public PlayerInfoImpact[] players;
         public static UserInterface Instance { get; private set; }
 
@@ -68,6 +67,18 @@ namespace ModLoaderSolution
             result.Apply();
             return result;
         }
+        GameObject Player;
+        string GetObjectsAboutPlayer()
+        {
+            if (Player == null)
+                Player = Utilities.GetPlayer();
+            string objects = "";
+            Collider[] hitColliders = Physics.OverlapSphere(Player.transform.position, 2);
+            foreach (Collider hitCollider in hitColliders)
+                if (hitCollider.gameObject.transform.root.gameObject.name != "Player_Human")
+                    objects += hitCollider.gameObject.name + ", ";
+            return objects;
+        }
         void OnGUI()
         {
             InitGUI();
@@ -92,9 +103,10 @@ namespace ModLoaderSolution
                 myButtonStyle2.normal.textColor = Color.white;
                 myButtonStyle2.normal.background = MakeTex(5, 5, new Color(0.2f, 0.06f, 0.12f));
                 myButtonStyle2.fontSize = 60;
-                GUI.Label(new Rect((Screen.width/2)-750, Screen.height- 80, 1500, 80), "scripts made with love by nohumanman :D", myButtonStyle2);
-                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 400, 1500, 80), Camera.main.transform.position.ToString(), myButtonStyle2);
-                hasBeenActive = true;
+                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 80, 1500, 80), GetObjectsAboutPlayer(), myButtonStyle2);
+                GUI.Label(new Rect((Screen.width/2)-750, Screen.height- 200, 1500, 80), "scripts made with love by nohumanman :D", myButtonStyle2);
+                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 400, 1500, 80), Player.transform.position.ToString(), myButtonStyle2);
+                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 500, 1500, 80), Player.transform.rotation.eulerAngles.ToString(), myButtonStyle2);
                 GUIStyle myButtonStyle = new GUIStyle(GUI.skin.button);
                 myButtonStyle.font = AssetBundling.Instance.bundle.LoadAsset<Font>("share-tech-mono.regular.ttf");
                 GUI.skin.font = AssetBundling.Instance.bundle.LoadAsset<Font>("share-tech-mono.regular.ttf");
@@ -118,6 +130,12 @@ namespace ModLoaderSolution
                     if (GUI.Button(new Rect(10, 195, 150, 25), "ToggleTrees()", myButtonStyle))
                         foreach (Terrain tr in FindObjectsOfType<Terrain>())
                             tr.drawTreesAndFoliage = !tr.drawTreesAndFoliage;
+                    if (GUI.Button(new Rect(10, 220, 150, 25), "ForceCSVLoad()", myButtonStyle))
+                    {
+                        GameObject trailParent = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        Trail x = trailParent.AddComponent<Trail>();
+                        x.LoadFromCSV("C:\\Users\\point\\Documents\\git\\github\\descenders-modkit\\server\\src\\static\\trails\\awesomesauce 4x-1.0.csv");
+                    }
                 }
                 int yPos = 10;
                 if (GUI.Button(new Rect(160, yPos, 150, 25), "\\/ checkpoints \\/"))
@@ -128,7 +146,7 @@ namespace ModLoaderSolution
                     foreach (GameObject point in Utilities.instance.GetCheckpointObjects())
                     {
                         if (GUI.Button(new Rect(160, yPos, 150, 25), point.name, myButtonStyle))
-                            Utilities.instance.GetPlayer().transform.position = point.transform.position;
+                            Utilities.GetPlayer().transform.position = point.transform.position;
                         yPos += 25;
                     }
                 }
@@ -143,8 +161,8 @@ namespace ModLoaderSolution
                         if (GUI.Button(new Rect(310, yPos, 150, 25), (string)typeof(PlayerInfoImpact).GetField("a^sXfY").GetValue(x), myButtonStyle))
                         {
                             Transform bikeTransform = ((GameObject)typeof(PlayerInfoImpact).GetField("W\u0082oQHKm").GetValue(x)).transform;
-                            GameObject.Find("Player_Human").transform.position = bikeTransform.position;
-                            GameObject.Find("Player_Human").transform.rotation = bikeTransform.rotation;
+                            Utilities.GetPlayer().transform.position = bikeTransform.position;
+                            Utilities.GetPlayer().transform.rotation = bikeTransform.rotation;
                         }
                         yPos += 25;
                     }
@@ -175,6 +193,19 @@ namespace ModLoaderSolution
                         catch { }
                         yPos += 25;
                     }
+                    // modifier for gravity
+                    GUI.Label(new Rect(460, yPos, 180, 25), "gravity:", myButtonStyle);
+                    string gravity = (GUI.TextArea(new Rect(640, yPos, 40, 25), Physics.gravity.y.ToString()) + "\n").Split('\n')[0];
+                    Physics.gravity = new Vector3(0, float.Parse(gravity), 0);
+                    yPos += 25;
+                    // modifier for FOV
+                    GUI.Label(new Rect(460, yPos, 180, 25), "FOV:", myButtonStyle);
+                    string fovModfier = (GUI.TextArea(new Rect(640, yPos, 40, 25), FovModifier.Instance.GetCurrentFov().ToString()) + "\n").Split('\n')[0];
+                    FovModifier.Instance.SetBikeFov(float.Parse(fovModfier));
+                    yPos += 25;
+                    GUIStyle clone = myButtonStyle;
+                    clone.fontSize = 15;
+                    GUI.Label(new Rect(460, yPos, 220, 100), "WARNING!\nUNSTABLE\nUSE AT YOUR OWN RISK!", myButtonStyle);
                 }
                 yPos = 10;
                 if (GUI.Button(new Rect(680, yPos, 150, 25), " \\/ Quality of Life \\/", myButtonStyle))
@@ -239,7 +270,6 @@ namespace ModLoaderSolution
                 playersList.Add(playerBehaviour);
             players = playersList.ToArray();
         }
-        Checkpoint[] allCheckpoints;
         public void Update()
         {
             if ((Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.I)))
@@ -248,14 +278,6 @@ namespace ModLoaderSolution
                 Utilities.instance.GetGestures();
                 isActive = !isActive;
                 Cursor.visible = isActive;
-            }
-            if (hasBeenActive)
-            {
-                if (allCheckpoints == null)
-                    allCheckpoints = FindObjectsOfType<Checkpoint>();
-                else
-                    foreach (Checkpoint x in allCheckpoints)
-                        x.doesWork = false;
             }
         }
     }

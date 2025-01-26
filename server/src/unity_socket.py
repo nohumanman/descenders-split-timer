@@ -6,9 +6,12 @@ import logging
 import os
 import asyncio
 import aiosqlite
+import sqlite3
 import requests
 import srcomapi
+import hashlib
 import srcomapi.datatypes as dt
+import discord
 from trail_timer import TrailTimer
 from tokens import STEAM_API_KEY
 
@@ -24,10 +27,10 @@ operations = {
         lambda netPlayer, data: netPlayer.set_steam_name(data[1]),
     "WORLD_NAME":
         lambda netPlayer, data: netPlayer.set_world_name(data[1]),
-    "BOUNDRY_ENTER":
-        lambda netPlayer, data: netPlayer.on_boundry_enter(data[1], data[2]),
-    "BOUNDRY_EXIT":
-        lambda netPlayer, data: netPlayer.on_boundry_exit(data[1], data[2]),
+    "BOUNDARY_ENTER":
+        lambda netPlayer, data: netPlayer.on_boundary_enter(data[1], data[2]),
+    "BOUNDARY_EXIT":
+        lambda netPlayer, data: netPlayer.on_boundary_exit(data[1], data[2]),
     "CHECKPOINT_ENTER":
         lambda netPlayer, data: netPlayer.on_checkpoint_enter(
             data[1],
@@ -39,11 +42,11 @@ operations = {
     "RESPAWN":
         lambda netPlayer, data: netPlayer.on_respawn(),
     "MAP_ENTER":
-        lambda netPlayer, data: netPlayer.on_map_enter(data[2]), # WARNING: data[2] FOR A REASON
+        lambda netPlayer, data: netPlayer.on_map_enter(data[1]),
     "MAP_EXIT":
         lambda netPlayer, data: netPlayer.on_map_exit(),
     "BIKE_SWITCH":
-        lambda netPlayer, data: netPlayer.on_bike_switch(data[2]), # WARNING: data[2] FOR A REASON
+        lambda netPlayer, data: netPlayer.on_bike_switch(data[1]),
     "REP":
         lambda netPlayer, data: netPlayer.set_reputation(data[1]),
     "SPEEDRUN_DOT_COM_LEADERBOARD":
@@ -72,6 +75,7 @@ class Player:
     avatar_src: str
     steam_id: str
     bike_type: str
+    bike_id: int
     world_name: str
     last_trick: str
     reputation: int
@@ -97,13 +101,15 @@ class UnitySocket():
         self.writer = writer
         self.trails = {}
         self.last_contact = time.time()
+        self.sent_non_modkit_notif = False
         self.info: Player = Player(
             steam_name="", steam_id="",
             avatar_src="",
             bike_type="", world_name="",
             last_trick="", reputation=0,
             version="OUTDATED", time_started=time.time(),
-            spectating="", spectating_id = ""
+            spectating="", spectating_id = "",
+            bike_id=0
         )
 
     async def log_line(self, line: str):
@@ -295,17 +301,22 @@ class UnitySocket():
             "%s '%s'\t- banned with type %s",
             self.info.steam_id, self.info.steam_name, _type
         )
-        if _type == "ILLEGAL":
-            await self.send("TOGGLE_GOD")
         await self.send("BANNED|" + _type)
 
     async def has_both_steam_name_and_id(self):
         """ Called when a player has both a steam name and id. """
-        await self.dbms.update_player(
-            self.info.steam_id,
-            self.info.steam_name,
-            await self.get_avatar_src()
-        )
+        try:
+            await self.dbms.update_player(
+                self.info.steam_id,
+                self.info.steam_name,
+                await self.get_avatar_src()
+            )
+        except sqlite3.IntegrityError:
+            # integrity error - so we probably have some bad input data
+            await self.send("SUCCESS") # ask for all our data again
+            self.info.steam_id = ""
+            self.info.steam_name = ""
+            return
         for player in self.parent.players:
             if (
                 player.info.steam_id == self.info.steam_id
@@ -313,11 +324,11 @@ class UnitySocket():
             ):
                 self.parent.players.remove(player)
         if self.info.steam_id in ["OFFLINE", ""]:
-            await self.ban("ILLEGAL")
-        banned_names = ["descender", "goldberg", "skidrow", "player"]
+            await self.ban("CRASH")
+        banned_names = ["descender", "goldberg", "skidrow", "player", "codex", "cdx", "steamrip", "steam", "rip", "cracked", "crack"]
         for banned_name in banned_names:
             if self.info.steam_name.lower() == banned_name:
-                await self.ban("ILLEGAL")
+                await self.ban("CRASH")
 
     async def set_steam_id(self, steam_id : str):
         """ Set the steam id of a player and invalidate timers if necessary """
@@ -331,7 +342,18 @@ class UnitySocket():
         # if id is not the correct length, ban the player
         if len(steam_id) != len("76561198805366422"):
             await self.send("SUCCESS")
-
+        # get pending items
+        pending_items = await self.dbms.get_pending_items(self.info.steam_id)
+        for item in pending_items:
+            await self.send("UNLOCK_ITEM|" + item[0])
+            await self.dbms.redeem_pending_item(
+                self.info.steam_id,
+                item[0]
+            )
+            await self.parent.discord_bot.send_message_to_channel(
+                f"Item redeemed by {self.info.steam_name}: {item[0]}",
+                1197188279158718486
+            )
     async def sanity_check(self):
         """ Perform a sanity check on a player's data. """
         # if no steam name, request it
@@ -360,6 +382,7 @@ class UnitySocket():
         logging.info(
             "%s '%s'\t- sending data '%s'", self.info.steam_id, self.info.steam_name, data
         )
+        await self.log_line("SENDING FROM SERVER: " + data)
         try:
             self.writer.write((data + "\n").encode("utf-8"))
             await self.writer.drain()
@@ -373,13 +396,15 @@ class UnitySocket():
                 "%s '%s'\t- exception '%s'", self.info.steam_id, self.info.steam_name, e
             )
 
-    async def send_all(self, data: str):
+    async def send_all(self, data: str, excluding = []):
         """ Send data to all players in the same session """
         logging.info(
             "%s '%s'\t- sending to all the data '%s''", self.info.steam_id,
             self.info.steam_name, data
         )
         for player in self.parent.players:
+            if player in excluding:
+                continue
             await player.send(data)
 
     async def handle_data(self, data: str):
@@ -387,11 +412,31 @@ class UnitySocket():
         self.last_contact = time.time()
         if data == "":
             return
+        await self.log_line("FROM_SERVER: " + data)
         data_list = data.split("|")
+        # check the hash
+        message = "|".join(data_list[:-1]) + "|" # the message is everything except the hash
+        message_hash = data_list[-1] # the hash is the second-to-last item in the list
+        # hash the message
+        our_message_hash = hashlib.sha256(message.encode('utf-8')).digest().hex()
+        # compare the hashes
+        if message_hash == our_message_hash:
+            await self.send("RECEIVED|" + message_hash)
+        else:
+            await self.log_line("FROM_SERVER: HASH FOR ", message, " DOES NOT MATCH!")
+
         for operator, function in operations.items():
             self.last_contact = time.time()
             if data.startswith(operator):
-                await function(self, data_list)
+                try:
+                    await function(self, data_list)
+                except IndexError:
+                    # our client sent wrong data!
+                    logging.warning(
+                        "Client sent wrong data! Version %s steam_id %s",
+                        self.info.version,
+                        self.info.steam_id
+                    )
 
     async def invalidate_all_trails(self, reason: str, exception = ""):
         """ Invalidate all trails for a player. """
@@ -409,8 +454,9 @@ class UnitySocket():
         logging.info("%s '%s'\t- respawned", self.info.steam_id, self.info.steam_name)
         for trail_name, trail in self.trails.items():
             if trail_name in self.trails:
+                if trail.timer_info.auto_verify:
+                    await self.send("SPLIT_TIME|Time requires review")
                 trail.timer_info.auto_verify = False
-                await self.send("SPLIT_TIME|Time requires review")
 
     async def get_trail(self, trail_name) -> TrailTimer:
         """ Get a trail timer for a player. """
@@ -421,19 +467,19 @@ class UnitySocket():
     async def on_bike_switch(self, new_bike: str):
         """ Called when a player switches bikes."""
         self.info.bike_type = new_bike
-        #self.send_all(f"SET_BIKE|{self.bike_type}|{self.info.steam_id}")
+        await self.send_all(f"SET_BIKE|{new_bike}|{self.info.steam_id}", excluding=[self])
         await self.invalidate_all_trails("You switched bikes!")
 
-    async def on_boundry_enter(self, trail_name: str, boundry_guid: str):
-        """ Called when a player enters a boundry. """
+    async def on_boundary_enter(self, trail_name: str, boundary_guid: str):
+        """ Called when a player enters a boundary. """
         trail = await self.get_trail(trail_name)
         
-        await trail.add_boundary(boundry_guid)
+        await trail.add_boundary(boundary_guid)
 
-    async def on_boundry_exit(self, trail_name: str, boundry_guid: str):
-        """ Called when a player exits a boundry. """
+    async def on_boundary_exit(self, trail_name: str, boundary_guid: str):
+        """ Called when a player exits a boundary. """
         trail = await self.get_trail(trail_name)
-        await trail.remove_boundary(boundry_guid)
+        await trail.remove_boundary(boundary_guid)
 
     async def on_checkpoint_enter(
         self,
@@ -481,13 +527,27 @@ class UnitySocket():
             self.info.bike_type = await self.get_default_bike()
         if self.info.steam_id is not None:
             await self.send_all("SET_BIKE|" + self.info.bike_type + "|" + self.info.steam_id)
+        # check static/trails to see if there's a csv file with the same name as world_name
+        for csv_map_name in os.listdir(f"{script_path}/static/trails"):
+            i = csv_map_name.find(".csv") # get the name of the map without the .csv (or .csv.2)
+            if csv_map_name[0:i] == map_name:
+                await self.send("NON_MODKIT_TRAIL|" + csv_map_name)
+                if not self.sent_non_modkit_notif:
+                    await self.send(
+                            "POPUP|Non modkit maps|Heyyy! You've got the Descenders modkit"
+                            " loaded right now, and this map has a non-modkit timer. This means"
+                            " you can make runs down trails with timers and see others splits"
+                            ". It also means there are no boundaries - so your run has to be"
+                            " verified by us. - nohumanman"
+                    )
+                    self.sent_non_modkit_notif = True
 
     async def on_map_exit(self):
         """ Called when a player exits a map. """
         await self.update_concurrent_users()
         for trail_name, trail in self.trails.items():
             if trail_name in self.trails:
-                trail.invalidate_timer()
+                await trail.invalidate_timer("")
         self.trails = {}
 
     async def update_concurrent_users(self):
@@ -499,7 +559,7 @@ class UnitySocket():
             if discord_bot is not None:
                 asyncio.run(discord_bot.set_presence(
                         str(len(self.parent.players))
-                        + " concurrent users!"
+                        + " racers!"
                 ))
         except RuntimeError:
             logging.info("update_concurrent_users() called, but it's already being attempted")

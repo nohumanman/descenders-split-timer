@@ -9,10 +9,11 @@ namespace ModLoaderSolution
 		Color32 startingColor;
 		public static SplitTimerText Instance { get; private set; }
 		public Text text;
-		public float time;
+		public float timeStart;
 		public string checkpointTime = "";
 		public bool count = false;
 		bool uiEnabled = true;
+        public bool hidden = true;
 		void Awake()
 		{
 			DontDestroyOnLoad(gameObject.transform.root);
@@ -21,11 +22,13 @@ namespace ModLoaderSolution
 			else
 				Instance = this;
 		}
+        Coroutine disableCP = null;
 		public void CheckpointTime(string message)
         {
-			StopCoroutine(DisableCheckpoint());
+            if (disableCP != null)
+			    StopCoroutine(disableCP);
 			checkpointTime = message;
-			StartCoroutine(DisableCheckpoint());
+            disableCP = StartCoroutine(DisableCheckpoint());
 		}
 		IEnumerator DisableCheckpoint()
         {
@@ -40,6 +43,7 @@ namespace ModLoaderSolution
 			SetText("");
 		}
 		bool wasConnected = false;
+		public double finalTime = 0;
 		public void Update()
         {
 			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.U))
@@ -58,6 +62,11 @@ namespace ModLoaderSolution
 				TextColToDefault();
 				wasConnected = true;
 			}
+			if (count)
+			{
+				SetText(FormatTime(Time.time - timeStart).ToString() + "\n" + checkpointTime);
+				finalTime = Time.time;
+			}
 		}
 		public void TextColToDefault()
         {
@@ -69,20 +78,22 @@ namespace ModLoaderSolution
 			text.supportRichText = true;
 			startingColor = text.color;
 			SetText("");
-			StartCoroutine(UpdateTime());
-			GameObject.Find("TextShadow").GetComponent<Text>().supportRichText = true;
+			Utilities.GameObjectFind("TextShadow").GetComponent<Text>().supportRichText = true;
 		}
 		public void SetText(string textToSet)
         {
 			textToSet = textToSet.Replace("\\n", "\n");
-			if (uiEnabled)
-				text.text = textToSet + "\n";
+			if (uiEnabled && !hidden)
+				text.text = textToSet + "\n"; // we give it this extra \n because it's too large otherwise
 			else
 				text.text = "";
 		}
-		public void RestartTimer()
+        public Trail currentTrail;
+		public void RestartTimer(Trail trailFocus)
 		{
-			time = 0;
+			hidden = false;
+            currentTrail = trailFocus;
+            timeStart =	Time.time;
 			checkpointTime = "";
 			count = true;
 			text.color = startingColor;
@@ -91,29 +102,15 @@ namespace ModLoaderSolution
 		{
 			count = false;
 			StartCoroutine(DisableTimerText(15));
-		}
-		public void FixedUpdate()
-		{
-			if (count)
-				time += Time.deltaTime;				
-		}
-		IEnumerator UpdateTime()
-        {
-			while (true)
-            {
-				if (count)
-					SetText(FormatTime(time).ToString() + "\n" + checkpointTime);
-				yield return new WaitForEndOfFrame();
-			}
-		}
-		public string FormatTime(float time)
+        }
+		public string FormatTime(double time)
 		{
 			int intTime = (int)time;
 			int minutes = intTime / 60;
 			int seconds = intTime % 60;
-			float fraction = time * 100;
-			fraction = (fraction % 100);
-			string timeText = System.String.Format("{0:00}:{1:00}.{2:00}", minutes, seconds, fraction);
+			double fraction = (time - intTime) * 1000;
+			fraction = Mathf.Round((float)fraction);
+			string timeText = System.String.Format("{0:00}:{1:00}.{2:000}", minutes, seconds, fraction);
 			return timeText;
 		}
 	}

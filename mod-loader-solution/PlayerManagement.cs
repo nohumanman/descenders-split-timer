@@ -5,13 +5,14 @@ using PlayerIdentification;
 using ModLoaderSolution;
 using UnityEngine.SceneManagement;
 using System;
+using ConsoleUtils;
 
 namespace ModLoaderSolution
 {
 	public class PlayerManagement : MonoBehaviour {
 		SteamIntegration steamIntegration = new SteamIntegration();
 		GameObject PlayerHuman;
-		Vector3 PreviousPos;
+		Vector3 PreviousPos = Vector3.zero;
 		public float speed;
 		bool wasBailed = false;
 		public static PlayerManagement Instance { get; private set; }
@@ -23,9 +24,26 @@ namespace ModLoaderSolution
 			else
 				Instance = this; 
 		}
-		public void NetStart(){
-			OnMapEnter("idhere", Utilities.instance.GetCurrentMap());
-			NetClient.Instance.SendData("BIKE_TYPE", GetComponent<BikeSwitcher>().GetBike());
+        void Update()
+        {
+            string currentMap = Utilities.instance.GetCurrentMap();
+            // if we've switched maps
+            if (currentMap != prevMap)
+                OnMapEnter(currentMap);
+            // if human doesn't exist
+            if (PlayerHuman == null)
+                PlayerHuman = Utilities.GetPlayer();
+            // if we've just bailed
+            if (Utilities.instance.hasBailed() && !wasBailed)
+                OnRespawn();
+            wasBailed = Utilities.instance.hasBailed();
+            // if human exists
+            if (PlayerHuman != null)
+                CheckForRespawn(); // check if we've respawned
+        }
+        public void NetStart(){
+			OnMapEnter(Utilities.instance.GetCurrentMap());
+            OnBikeSwitch(BikeSwitcher.GetBike());
 			NetClient.Instance.SendData("VERSION", NetClient.GetVersion());
 			NetClient.Instance.SendData("STEAM_ID", steamIntegration.getSteamId());
 			NetClient.Instance.SendData("STEAM_NAME", steamIntegration.getName());
@@ -36,89 +54,100 @@ namespace ModLoaderSolution
 				if (trail.leaderboardText != null)
                 {
 					Utilities.Log("Found Speedrun.com Leaderboard for '" + trail.name + "'");
-					NetClient.Instance.SendData("SPEEDRUN_DOT_COM_LEADERBOARD|" + trail.name);
+					NetClient.Instance.SendData("SPEEDRUN_DOT_COM_LEADERBOARD", trail.name);
 				}
 				if (trail.autoLeaderboardText != null)
                 {
 					Utilities.Log("Found auto Leaderboard for '" + trail.name + "'");
-					NetClient.Instance.SendData("LEADERBOARD|" + trail.name);
+					NetClient.Instance.SendData("LEADERBOARD", trail.name);
 				}
             }
 		}
 		string prevMap = "";
-		IEnumerator ChangeMapPresence(string map_name)
+		public void CheckForRespawn()
+		{
+            // if player doesn't exist they can't respawn
+            if (Utilities.GetPlayer() == null) return;
+			// if human has moved very quickly then they have respawned
+            if (Vector3.Distance(PlayerHuman.transform.position, PreviousPos) > 6)
+            {
+                OnRespawn();
+                PreviousPos = PlayerHuman.transform.position;
+            }
+            speed = Vector3.Distance(PlayerHuman.transform.position, PreviousPos) / Time.deltaTime;
+            PreviousPos = PlayerHuman.transform.position;
+        }
+        public void SortEnvironment(string map_name)
         {
-			long startTimestamp = Utilities.ToUnixTime(DateTime.UtcNow);
-			while (Utilities.instance.GetCurrentMap() == map_name)
+            // if map_name is 0 we are in lobby
+            if (map_name == "0")
+                Destroy(Utilities.GameObjectFind("sign_modoftheyear"));
+            if (map_name == "Ced's Downhill Park-1.0")
             {
-				Utilities.instance.UpdateDiscordPresence(startTimestamp);
-				yield return new WaitForSeconds(3f);
-			}
-		}
-		void Update () {
-			if (Utilities.instance.GetCurrentMap() != prevMap)
-            {
-				StartCoroutine(ChangeMapPresence(Utilities.instance.GetCurrentMap()));
-				Utilities.Log("Map Change Detected");
-				OnMapEnter("idhere", Utilities.instance.GetCurrentMap());
-				// if not a bike park or a mod
-				if (!Utilities.instance.isBikePark() && !Utilities.instance.isMod() && !(Utilities.instance.GetCurrentMap() == "0"))
-				{
-					StatsModification.instance.ResetStats();
-					StatsModification.instance.permitted = false;
-				}
-				else
-					StatsModification.instance.permitted = true;
-				StatsModification.instance.DirtyStats();
-				prevMap = Utilities.instance.GetCurrentMap();
-			}
-			if (PlayerHuman == null)
-				PlayerHuman = GameObject.Find("Player_Human");
-			if (Utilities.instance.hasBailed() && !wasBailed)
-				OnRespawn();			
-			wasBailed = Utilities.instance.hasBailed();
-			if (PlayerHuman != null){
-				//if (!hasLoadedPlayer)
-				//	GetComponent<BikeSwitcher>().ToEnduro();
-				if (Vector3.Distance(
-						PlayerHuman.transform.position,
-						PreviousPos
-					) > 6){
-					OnRespawn();
-					PreviousPos = PlayerHuman.transform.position;
-				}
-				speed = Vector3.Distance(PlayerHuman.transform.position, PreviousPos) / Time.deltaTime;
-				PreviousPos = PlayerHuman.transform.position;
-			}
-			//Utilities.Log(PhotonNetwork.CloudRegion);
-			//Utilities.Log(PhotonNetwork.CreateRoom("6969"));
-			//Utilities.Log(PhotonNetwork.JoinRoom("6969"));
-		}
-		public void OnRespawn(){
+                string[] strs = new string[] { "C1", "C2", "C3", "C4", "C1.5" };
+                foreach (string str in strs)
+                {
+                    Utilities.GameObjectFind(str).tag = "Checkpoint";
+                }
+                // Pos -449.2, 1698.8, 488.9
+                // rot 7, 86, 359
+                // instantiate new checkpoint
+                GameObject CP = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                CP.transform.position = new Vector3(-449, 1698, 488);
+                CP.transform.SetPositionAndRotation(
+                    new Vector3(-449, 1698, 488),
+                    Quaternion.Euler(7, 86, 359)
+                );
+                CP.transform.localScale = new Vector3(15, 15, 1);
+                CP.GetComponent<BoxCollider>().isTrigger = true;
+                CP.GetComponent<MeshRenderer>().enabled = false;
+                CP.tag = "Checkpoint";
+            }
+        }
+        #region 'on' methods
+        public void OnRespawn(){
+            SplitTimerText.Instance.hidden = true;
 			NetClient.Instance.SendData("RESPAWN");
 		}
-		public void OnBikeSwitch(string old_bike, string new_bike){
-			NetClient.Instance.SendData("BIKE_SWITCH|" + old_bike + "|" + new_bike);
+		public void OnBikeSwitch(string new_bike){
+			NetClient.Instance.SendData("BIKE_SWITCH", new_bike);
 		}
-		public void OnBoundryEnter(string trail_name, string boundry_guid){
-			NetClient.Instance.SendData("BOUNDRY_ENTER|" + trail_name + "|" + boundry_guid);
+		public void OnBoundaryEnter(string trail_name, string boundary_guid){
+			NetClient.Instance.SendData("BOUNDARY_ENTER", trail_name, boundary_guid);
 		}
-		public void OnBoundryExit(string trail_name, string boundry_guid, string boundry_obj_name){
-			NetClient.Instance.SendData("BOUNDRY_EXIT|" + trail_name + "|" + boundry_guid + "|" + boundry_obj_name);
+		public void OnBoundaryExit(string trail_name, string boundary_guid, string boundary_obj_name){
+			NetClient.Instance.SendData("BOUNDARY_EXIT", trail_name, boundary_guid, boundary_obj_name);
 		}
 		public void OnCheckpointEnter(string trail_name, string type, int total_checkpoints, string client_time, string hash){
-			NetClient.Instance.SendData("CHECKPOINT_ENTER|" + trail_name + "|" + type + "|" + total_checkpoints.ToString() + "|" + client_time + "|" + hash);
+			NetClient.Instance.SendData("CHECKPOINT_ENTER", trail_name, type, total_checkpoints, client_time, hash);
 		}
-		public void OnMapEnter(string map_id, string map_name){
-			NetClient.Instance.SendData("MAP_ENTER|" + map_id + "|" + map_name);
-			// if map_name is 0 we are in lobby
-			if (map_name == "0")
-				Destroy(GameObject.Find("sign_modoftheyear"));
-			if (Utilities.instance.isMod()) // only do this to mods to not mess things up
-				Utilities.instance.NormaliseModSongs();
-		}
+		public void OnMapEnter(string map_name){
+            Utilities.Log("Map Change Detected");
+            if (NetClient.Instance != null)
+                NetClient.Instance.SendData("MAP_ENTER", map_name);
+            if (CustomDiscordManager.instance != null)
+                StartCoroutine(CustomDiscordManager.instance.ChangeMapPresence(map_name));
+            else
+                Debug.LogWarning("CustomDiscordManager does not exist yet..");
+            // if not a bike park or a mod
+            if (!Utilities.instance.isBikePark() && !Utilities.instance.isMod() && !(map_name == "0"))
+            {
+                StatsModification.instance.ResetStats();
+                StatsModification.instance.permitted = false;
+            }
+            else
+                StatsModification.instance.permitted = true;
+            // if we're in a mod, fix the playlist
+            if (Utilities.instance.isMod())
+                Utilities.instance.NormaliseModSongs();
+            // get rid of any environment items we hate
+            try { SortEnvironment(map_name);}
+            catch { }
+            prevMap = map_name;
+        }
 		public void OnMapExit(){
 			NetClient.Instance.SendData("MAP_EXIT");
 		}
-	}
+        #endregion
+    }
 }

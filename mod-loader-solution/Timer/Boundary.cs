@@ -25,6 +25,7 @@ namespace ModLoaderSolution
         public void Start()
         {
             boundaryHash = GetHash(20, 50);
+            gameObject.GetComponent<MeshRenderer>().enabled = false;
             // Utilities.Log("Boundary | Boundary added to " + this.gameObject.name);
         }
         public void OnTriggerStay(Collider other)
@@ -38,8 +39,9 @@ namespace ModLoaderSolution
             {
                 if (!inBoundary && !notifiedServerOfEnter)
                 {
+                    trail.lastBoundaryExit = -1f;
                     other.gameObject.GetComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.Continuous;
-                    PlayerManagement.Instance.OnBoundryEnter(
+                    PlayerManagement.Instance.OnBoundaryEnter(
                         trail.name,
                         boundaryHash
                     );
@@ -53,7 +55,7 @@ namespace ModLoaderSolution
         {
             if (inBoundary)
             {
-                PlayerManagement.Instance.OnBoundryEnter(
+                PlayerManagement.Instance.OnBoundaryEnter(
                      trail.name,
                      boundaryHash
                  );
@@ -62,11 +64,19 @@ namespace ModLoaderSolution
         void FixedUpdate()
         {
             if (!inBoundary && !notifiedServerOfExit) {
-                PlayerManagement.Instance.OnBoundryExit(
+                PlayerManagement.Instance.OnBoundaryExit(
                     trail.name,
                     boundaryHash,
                     this.gameObject.name
                 );
+                if (!trail.InAnyBoundaries())
+                {
+                    trail.lastBoundaryExit = Time.time;
+                }
+                else
+                {
+                    trail.lastBoundaryExit = -1;
+                }
                 notifiedServerOfExit = true;
                 notifiedServerOfEnter = false;
             }
