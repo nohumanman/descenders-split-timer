@@ -1,8 +1,8 @@
 <template>
-  <v-container class="fill-height">
+  <v-container class="fill-height d-flex justify-center">
     <v-responsive
-      class="align-centerfill-height mx-auto"
-      max-width="900"
+      class="align-center fill-height mx-auto"
+      :max-width="height"
     >
       <v-img
         class="mb-4"
@@ -18,8 +18,8 @@
 
       <div class="py-4" />
   
-      <v-row>
-        <v-col cols="6">
+      <v-row align="center" justify="center">
+        <v-col cols="12" md="6" sm="12" xs="12">
           <v-card
             append-icon="mdi-open-in-app"
             class="py-4"
@@ -32,7 +32,6 @@
             title="Leaderboard"
             variant="text"
           >
-
             <v-overlay
               opacity=".06"
               scrim="primary"
@@ -43,7 +42,7 @@
           </v-card>
         </v-col>
 
-        <v-col cols="6">
+        <v-col cols="12" md="6" sm="12" xs="12">
           <v-card
             append-icon="mdi-open-in-app"
             class="py-4"
@@ -66,7 +65,7 @@
           </v-card>
         </v-col>
 
-        <v-col cols="6">
+        <v-col cols="12" md="6" sm="12" xs="12">
           <v-card
             append-icon="mdi-open-in-app"
             class="py-4"
@@ -89,7 +88,7 @@
           </v-card>
         </v-col>
 
-        <v-col cols="6">
+        <v-col cols="12" md="6" sm="12" xs="12">
           <v-card
             append-icon="mdi-open-in-new"
             class="py-4"
@@ -112,10 +111,10 @@
             />
           </v-card>
         </v-col>
-        <v-col cols="3">
+        <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
             class="py-4"
-            color="primary"
+            color="blue"
             href="">
             <!-- Currently x users online, x times submitted in past 30 days -->
             <v-card-title>
@@ -126,7 +125,7 @@
             </v-card-subtitle>
           </v-card>
         </v-col>
-        <v-col cols="3">
+        <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
             class="py-4"
             color="blue"
@@ -140,10 +139,10 @@
             </v-card-subtitle>
           </v-card>
         </v-col>
-        <v-col cols="3">
+        <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
             class="py-4"
-            color="primary"
+            color="blue"
             href="">
             <v-card-title>
               {{ totalStoredTimes }}
@@ -153,10 +152,10 @@
             </v-card-subtitle>
           </v-card>
         </v-col>
-        <v-col cols="3">
+        <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
             class="py-4"
-            color="primary"
+            color="blue"
             href="">
             <v-card-title>
               {{  totalReplaySize }}GB
@@ -172,7 +171,25 @@
 </template>
 
 <script setup>
-  //
+    import { useDisplay } from 'vuetify'
+    import { computed } from 'vue'
+
+  // Destructure only the keys you want to use
+  const { name } = useDisplay()
+  const height = computed(() => {
+    // name is reactive and
+    // must use .value
+    switch (name.value) {
+      case 'xs': return 320
+      case 'sm': return 470
+      case 'md': return 900
+      case 'lg': return 900
+      case 'xl': return 800
+      case 'xxl': return 1200
+    }
+    return undefined
+  })
+
 </script>
 
 <script>
@@ -213,7 +230,6 @@
     });
   
   var timestampThirtyDaysAgo = (new Date().getTime() - 30 * 24 * 60 * 60 * 1000) / 1000;
-  console.log(timestampThirtyDaysAgo);
   fetch('http://localhost:8082/api/get-total-stored-times?timestamp=' + timestampThirtyDaysAgo.toString())
     
     .then(response => response.json())

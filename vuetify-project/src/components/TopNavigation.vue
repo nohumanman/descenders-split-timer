@@ -1,0 +1,82 @@
+<template>
+<v-app-bar app>
+    <v-container fluid>
+        <v-row  align="center" justify="space-between">
+        <v-col cols="auto">
+            <router-link to="/">
+            <img src="@/assets/logo.png" alt="Descenders Modkit Logo" height="40" />
+            </router-link>
+        </v-col>
+        <v-col class="d-none d-md-flex">
+            <template v-for="route in routes">
+            <v-btn
+                v-if="route.name !== 'Home'"
+                text
+                :to="route.path"
+                :key="route.name"
+            >{{ route.name }}</v-btn>
+            </template>
+        </v-col>
+        <v-col v-if="xs || sm">
+            <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+        </v-col>
+        </v-row>
+    </v-container>
+    
+    <v-spacer />
+    <template v-slot:append>
+        <v-btn @click="toggleTheme" icon="mdi-weather-sunny"></v-btn>
+        <v-btn icon="mdi-cog"></v-btn>
+    </template>
+    </v-app-bar>
+
+    <v-navigation-drawer
+        v-model="drawer"
+        app
+        left
+        v-if="xs || sm"
+    >
+        <v-list>
+            <v-list-item
+                v-for="route in routes"
+                :to="route.path"
+                :key="route.name"
+                link
+            >
+                <v-list-item-title>{{ route.name }}</v-list-item-title>
+            </v-list-item>
+        </v-list>
+    </v-navigation-drawer>
+</template>
+
+<script>
+import { routes } from '@/router'
+    export default {
+        name: 'App',
+        data() {
+        return {
+            routes,
+            darkMode: true,
+            drawer: false,
+        }
+    }
+}
+</script>
+
+<script setup>
+  import { useTheme, useDisplay } from 'vuetify'
+  const { xs, sm } = useDisplay()
+
+  const theme = useTheme()
+
+  // Load the theme from localStorage if available
+  if (localStorage.getItem('theme')) {
+    theme.global.name.value = localStorage.getItem('theme')
+  }
+
+  function toggleTheme () {
+    const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
+    theme.global.name.value = newTheme
+    localStorage.setItem('theme', newTheme)
+  }
+</script>

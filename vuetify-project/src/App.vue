@@ -1,35 +1,8 @@
 <template>
   <v-app>
+    <TopNavigation />
     <!-- App Bar -->
-    <v-app-bar app>
-
-      <v-container>
-        <v-row  align="center" justify="space-between">
-          <v-col cols="auto">
-            <router-link to="/">
-              <img src="@/assets/logo.png" alt="Descenders Modkit Logo" height="40" />
-            </router-link>
-          </v-col>
-          <v-col>
-            <template v-for="route in routes">
-              <v-btn
-                v-if="route.name !== 'Home'"
-                text
-                :to="route.path"
-                :key="route.name"
-              >{{ route.name }}</v-btn>
-            </template>
-          </v-col>
-        </v-row>
-      </v-container>
-      
-      <template v-slot:append>
-        <v-btn @click="toggleTheme" icon="mdi-weather-sunny"></v-btn>
-        <v-btn icon="mdi-cog"></v-btn>
-      </template>
-      <v-spacer />
-
-    </v-app-bar>
+    
 
     <!-- Main Content -->
     <v-main>
@@ -42,32 +15,5 @@
   </v-app>
 </template>
 
-<script setup>
-  import { useTheme } from 'vuetify'
 
-  const theme = useTheme()
 
-  // Load the theme from localStorage if available
-  if (localStorage.getItem('theme')) {
-    theme.global.name.value = localStorage.getItem('theme')
-  }
-
-  function toggleTheme () {
-    const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
-    theme.global.name.value = newTheme
-    localStorage.setItem('theme', newTheme)
-  }
-</script>
-
-<script>
-  import { routes } from '@/router'
-  export default {
-    name: 'App',
-    data() {
-      return {
-        routes,
-        darkMode: true
-      }
-    }
-  }
-</script>
