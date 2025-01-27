@@ -7,7 +7,7 @@ import sqlite3
 import psycopg2
 
 # connect to sqlite
-conn = sqlite3.connect('modkit.db')
+conn = sqlite3.connect('server/src/database-schema/modkit.db')
 cursor = conn.cursor()
 
 # get all players
@@ -20,7 +20,7 @@ psycopg2_conn = psycopg2.connect("postgresql://postgres:postgres@localhost/postg
 psycopg2_cursor = psycopg2_conn.cursor()
 
 psycopg2_cursor.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") # TODO: DELETEME
-with open("schema.sql", "r") as f:
+with open("server/src/database-schema/schema.sql", "r") as f:
     psycopg2_cursor.execute(f.read())
 
 # insert into players
@@ -86,14 +86,17 @@ print("inserting split times")
 cursor.execute("SELECT * FROM SplitTime")
 split_times = cursor.fetchall()
 for split_time in split_times:
+    # start transaction
     try:
         psycopg2_cursor.execute(
-            "INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (%s, %s, %s)", (int(split_time[0]), int(split_time[1]), split_time[2])
+            "INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (%s, %s, %s)",
+            (int(split_time[0]), int(split_time[1]), split_time[2])
         )
-        psycopg2_conn.commit()
     except Exception as e:
         print(e)
         print(split_time)
+    psycopg2_conn.commit()
+
 psycopg2_conn.commit()
 
 

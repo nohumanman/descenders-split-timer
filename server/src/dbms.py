@@ -222,10 +222,16 @@ class DBMS:
                 for trail in trails
             ]
 
-    async def get_leaderboard(self, trail_name = None, world_name = None, num=10, verified=True):
+    async def get_leaderboard(
+            self,
+            trail_name = None,
+            world_name = None,
+            num=10,
+            verified=True
+        ) -> list[dict]:
         async with self.async_session() as session:
             query = select(FinalTimesDetailed).filter_by(deleted=False, verified=verified)
-            if trail_name and world_name:
+            if trail_name is not None and world_name is not None:
                 query = query.join(Trail, Trail.trail_id == FinalTimesDetailed.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
             if num:
                 query = query.order_by(FinalTimesDetailed.final_time).limit(num)
@@ -238,7 +244,7 @@ class DBMS:
                 {
                     "place": i + 1,
                     "starting_speed": final_times_detailed.starting_speed,
-                    "name": (await session.get(Player, final_times_detailed.steam_id)).steam_name,
+                    "name": (await self.get_player(final_times_detailed.steam_id)),
                     "bike": final_times_detailed.bike_id,
                     "version": final_times_detailed.version,
                     "verified":final_times_detailed.verified,
@@ -357,7 +363,7 @@ class DBMS:
                     Trail.trail_name == trail_name,
                     Trail.world_name == world_name
                 )
-            )
+            )            
             speeds = result.scalars().all()
             return sum(speeds) / len(speeds) if speeds else None
 

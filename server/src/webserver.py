@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime
 import logging
+import asyncio
 from werkzeug.utils import secure_filename
 
 # Flask imports
@@ -221,9 +222,12 @@ class Webserver():
         """Get the total number of stored times"""
         # extract timestamp
         timestamp = request.args.get("timestamp")
-        if timestamp is not None:
-            return str(await self.dbms.get_total_stored_times(int(round(float(timestamp)))))
-        return str(await self.dbms.get_total_stored_times())
+        try:
+            if timestamp is not None:
+                return str(await self.dbms.get_total_stored_times(int(round(float(timestamp)))))
+            return str(await self.dbms.get_total_stored_times())
+        except asyncio.exceptions.CancelledError:
+            return jsonify({})
 
     async def spectate(self):
         """ Function to spectate a player """
@@ -581,114 +585,32 @@ class Webserver():
         if trail_name is None or world_name is None:
             return jsonify({})
 
-        bike_type = 1
+        try:
+            leaderboard = await self.dbms.get_leaderboard(trail_name, world_name)
+        except asyncio.exceptions.CancelledError:
+            return jsonify({})
         return jsonify([
                 {
-                    "place": 1,
-                    "starting_speed": 3,
-                    "name": "Jerry Adams",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1234567890,
-                }, {
-                    "place": 2,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 2,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 4,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 5,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 6,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 7,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 8,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 9,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
-                }, {
-                    "place": 10,
-                    "starting_speed": 3,
-                    "name": "JOe Mama",
-                    "bike": "enduro" if bike_type == 1 else "downhill",
-                    "version": "1.34",
-                    "verified": True,# verified,
-                    "time_id": 67876567876545678,
-                    "time": 2,
-                    "submission_timestamp": 1737854835,
+                    "place": player_time["place"],
+                    "starting_speed": player_time["starting_speed"],
+                    "name": player_time["name"],
+                    "bike": player_time["bike"],
+                    "version": player_time["version"],
+                    "verified": player_time["verified"],
+                    "deleted": player_time["deleted"],
+                    "time_id": player_time["time_id"],
+                    "time": player_time["time"],
+                    "submission_timestamp": player_time["submission_timestamp"],
                 }
+                for player_time in leaderboard
             ])
 
     async def get_leaderboard_trail(self, trail):
         """ Function to get the leaderboard of the website"""
-        return jsonify(await self.dbms.get_leaderboard(trail))
+        try:
+            return jsonify(await self.dbms.get_leaderboard(trail))
+        except asyncio.exceptions.CancelledError:
+            return jsonify({})
 
     async def get_all_times(self):
         """ Function to get all the times of the website"""
