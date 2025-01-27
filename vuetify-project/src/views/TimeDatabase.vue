@@ -29,9 +29,12 @@
           {{ new Date(item.submission_timestamp * 1000).toLocaleString() }}
         </template>
         <template v-slot:item.time_id="{ item }">
-          <v-btn target="_blank" :href="'/time/' + item.time_id">
+          <v-btn target="_blank" :href="'https://modkit.nohumanman.com/time/' + item.time_id">
             <v-icon>mdi-open-in-new</v-icon>
           </v-btn>
+        </template>
+        <template v-slot:item.time="{ item }">
+          {{ secs_to_str(item.time) }}
         </template>
       </v-data-table-server>
     </v-container>
@@ -93,6 +96,23 @@
           this.loading = false
         })
       },
+      secs_to_str(secs){
+            secs = parseFloat(secs);
+            var d_mins = Math.floor(secs / 60);
+            var d_secs = Math.floor(secs % 60)
+            var fraction = secs * 1000;
+            fraction = Math.round(fraction % 1000);
+            d_mins = d_mins.toString();
+            d_secs = d_secs.toString();
+            fraction = fraction.toString();
+            if (d_mins.length == 1)
+                d_mins = "0" + d_mins.toString()
+            if (d_secs.length == 1)
+                d_secs = "0" + d_secs
+            while (fraction.length < 3)
+                fraction = "0" + fraction
+            return d_mins + ":" + d_secs + "." + fraction
+        },
     },
   }
 </script>

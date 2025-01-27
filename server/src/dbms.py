@@ -335,7 +335,7 @@ class DBMS:
             elif sortBy == "version":
                 query = query.order_by(FinalTimesDetailed.version.desc() if sortDesc else FinalTimesDetailed.version)
 
-            if page and itemsPerPage:
+            if itemsPerPage != -1 and page and itemsPerPage:
                 query = query.limit(itemsPerPage).offset((page - 1) * itemsPerPage)
             result = await session.execute(query)
             times = result.scalars().all()
@@ -347,7 +347,7 @@ class DBMS:
                     "version": final_times_detailed.version,
                     "verified":final_times_detailed.verified,
                     "deleted":final_times_detailed.deleted,
-                    "time_id": final_times_detailed.player_time_id,
+                    "time_id": str(final_times_detailed.player_time_id),
                     "time": final_times_detailed.final_time,
                     "submission_timestamp": final_times_detailed.submission_timestamp
                 }
