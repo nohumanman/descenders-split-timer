@@ -205,8 +205,8 @@ class DBMS:
     async def get_total_stored_times(self, timestamp: int = 0) -> int:
         async with self.async_session() as session:
             result = await session.execute(
-                select(PlayerTime)
-                .where(PlayerTime.submission_timestamp > timestamp)
+                select(FinalTimesDetailed)
+                .where(FinalTimesDetailed.submission_timestamp > timestamp)
             )
             return len(result.scalars().all())
 
@@ -342,7 +342,7 @@ class DBMS:
             return [
                 {
                     "starting_speed": final_times_detailed.starting_speed,
-                    "name": (await session.get(Player, final_times_detailed.steam_id)).steam_name,
+                    "name": await self.get_player(final_times_detailed.steam_id),
                     "bike": final_times_detailed.bike_id,
                     "version": final_times_detailed.version,
                     "verified":final_times_detailed.verified,

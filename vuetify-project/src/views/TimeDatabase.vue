@@ -1,24 +1,17 @@
 <template>
   <v-container fluid width="100%"
   height="90%">
-  <v-text-field
-        v-model="search"
-        append-icon="mdi-magnify"
-        label="Search"
-        single-line
-        hide-details
-        class="mb-4"
-      />
+
   <v-container
-    fluid
     width="100%"
-    height="100%"
+    height="80vh"
     class="d-flex justify-center d-sm-flex"
   >      
-      
+
       <v-data-table-server
           width="100%"
           height="100%"
+
           v-model:items-per-page="itemsPerPage"
           :headers="headers"
           :items="serverItems"
@@ -46,55 +39,42 @@
   </template>  
 
   <script>
-  const desserts = [
-      {
-        place: 2,
-        starting_speed: 3,
-        "name": "JOe Mama",
-        "bike": "enduro",
-        "version": "1.34",
-        "verified": true,
-        "time_id": 67876567876545678,
-        "time": 2,
-        "submission_timestamp": 1737854835,
-    }
-  ]
-
   const FakeAPI = {
     async fetch ({ page, itemsPerPage, sortBy }) {
-      return new Promise(resolve => {
-        setTimeout(() => {
-          const start = (page - 1) * itemsPerPage
-          const end = start + itemsPerPage
-          const items = desserts.slice()
 
-          if (sortBy.length) {
-            const sortKey = sortBy[0].key
-            const sortOrder = sortBy[0].order
-            items.sort((a, b) => {
-              const aValue = a[sortKey]
-              const bValue = b[sortKey]
-              return sortOrder === 'desc' ? bValue - aValue : aValue - bValue
-            })
-          }
-
-          const paginated = items.slice(start, end)
-
-          resolve({ items: paginated, total: items.length })
-        }, 500)
+      const params = new URLSearchParams({
+        page: page,
+        items_per_page: itemsPerPage,
+        sort_by: sortBy.length ? sortBy[0].key : '',
+        order: sortBy.length ? (sortBy[0].order === 'desc' ? 'desc' : 'asc') : '',
       })
+
+      const resp = await fetch('http://localhost:8082/api/get-total-stored-times')
+      const num_tot = await resp.json()
+
+      const response = await fetch(`http://localhost:8082/get-all-times?${params.toString()}`)
+      const data = await response.json()
+      // data is [{ name, bike, verified, version, game_version, time, submission_timestamp, time_id }, ...]
+      
+
+      // total is a number
+
+      return {
+        items: data,
+        total: num_tot,
+      }
     },
   }
 
   export default {
     data: () => ({
-      itemsPerPage: 30,
+      itemsPerPage: 10,
       headers: [
         { title: 'Player Name', key: 'name', align: 'start', },
         { title: 'Bike Type', key: 'bike', align: 'end' },
         { title: 'Verified', key: 'verified', align: 'end' },
         { title: 'Modkit Version', key: 'version', align: 'end' },
-        { title: 'Game Version', key: 'game_version', align: 'end' },
+        //{ title: 'Game Version', key: 'game_version', align: 'end' },
         { title: 'Time', key: 'time', align: 'center' },
         { title: 'Submission Date', key: 'submission_timestamp', align: 'end' },
         { title: '', key: 'time_id', align: 'end' },
