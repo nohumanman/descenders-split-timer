@@ -205,8 +205,8 @@ class DBMS:
     async def get_total_stored_times(self, timestamp: int = 0) -> int:
         async with self.async_session() as session:
             result = await session.execute(
-                select(PlayerTime)
-                .where(PlayerTime.submission_timestamp > timestamp)
+                select(FinalTimesDetailed)
+                .where(FinalTimesDetailed.submission_timestamp > timestamp)
             )
             return len(result.scalars().all())
 
@@ -335,19 +335,19 @@ class DBMS:
             elif sortBy == "version":
                 query = query.order_by(FinalTimesDetailed.version.desc() if sortDesc else FinalTimesDetailed.version)
 
-            if page and itemsPerPage:
+            if itemsPerPage != -1 and page and itemsPerPage:
                 query = query.limit(itemsPerPage).offset((page - 1) * itemsPerPage)
             result = await session.execute(query)
             times = result.scalars().all()
             return [
                 {
                     "starting_speed": final_times_detailed.starting_speed,
-                    "name": (await session.get(Player, final_times_detailed.steam_id)).steam_name,
+                    "name": await self.get_player(final_times_detailed.steam_id),
                     "bike": final_times_detailed.bike_id,
                     "version": final_times_detailed.version,
                     "verified":final_times_detailed.verified,
                     "deleted":final_times_detailed.deleted,
-                    "time_id": final_times_detailed.player_time_id,
+                    "time_id": str(final_times_detailed.player_time_id),
                     "time": final_times_detailed.final_time,
                     "submission_timestamp": final_times_detailed.submission_timestamp
                 }

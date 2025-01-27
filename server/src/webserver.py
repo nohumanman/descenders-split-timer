@@ -598,7 +598,7 @@ class Webserver():
                     "version": player_time["version"],
                     "verified": player_time["verified"],
                     "deleted": player_time["deleted"],
-                    "time_id": player_time["time_id"],
+                    "time_id": str(player_time["time_id"]),
                     "time": player_time["time"],
                     "submission_timestamp": player_time["submission_timestamp"],
                 }
@@ -614,8 +614,12 @@ class Webserver():
 
     async def get_all_times(self):
         """ Function to get all the times of the website"""
-        lim_str = request.args.get("lim")
-        if lim_str is None:
-            return jsonify({})
-        lim = int(lim_str)
-        return jsonify({"times": await self.dbms.get_recent_times(lim)})
+        page = int(request.args.get("page"))
+        items_per_page = int(request.args.get("items_per_page"))
+        sort_by = request.args.get("sort_by")
+        order = request.args.get("order")        
+        return jsonify(
+            await self.dbms.get_recent_times(
+                page, items_per_page, sort_by, order == "desc"
+            )
+        )
