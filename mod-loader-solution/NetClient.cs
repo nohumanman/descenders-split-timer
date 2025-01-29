@@ -97,8 +97,8 @@ namespace ModLoaderSolution
 				File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Low\\RageSquid\\Descenders\\last_version.txt", NetClient.version);
 			}
 			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.P)) {
-				Debug.Log("LOGGING SCSVVV");
-                Debug.Log(HolisticMethodAnalysis.GetCalledMethodsAsCsv());
+                string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Low\\RageSquid\\Descenders\\method-calls.csv";
+                HolisticMethodAnalysis.WriteCalledMethodsToCsv(path);
             }
 				
 			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.C))

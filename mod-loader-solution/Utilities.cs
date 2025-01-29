@@ -297,9 +297,12 @@ namespace ModLoaderSolution
         }
         public bool isInReplayMode()
         {
-            if (Utilities.GameObjectFind("State_ReplayBrowser") != null)
-                return true;
-            return false;
+            using (new MethodAnalysis())
+            {
+                if (Utilities.GameObjectFind("State_ReplayBrowser") != null)
+                    return true;
+                return false;
+            }
         }
         public string GetBikeParkName(string seed)
         {

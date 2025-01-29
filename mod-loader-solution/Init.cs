@@ -116,6 +116,7 @@ namespace ModLoaderSolution
             StartCoroutine(DownloadModInjector());
             InitialiseObjs(true);
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+            Application.SetStackTraceLogType(LogType.Exception, StackTraceLogType.Full);
         }
         private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadSceneMode)
         {
