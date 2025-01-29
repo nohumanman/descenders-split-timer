@@ -10,6 +10,7 @@ namespace ModLoaderSolution
         public static TimeModifier Instance { get; private set; }
         public float speed = 1f;
         public bool bother = false;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Awake()
         {
             if (Instance != null && Instance != this)
@@ -17,6 +18,7 @@ namespace ModLoaderSolution
             else
                 Instance = this;
         }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Update()
         {
             if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.Y))

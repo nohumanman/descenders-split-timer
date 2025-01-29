@@ -10,6 +10,7 @@ namespace ModLoaderSolution
     class TeleportAtCursor : MonoBehaviour
     {
         bool teleportAtNextMouseClick = false;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Update()
         {
             if (Input.GetKeyDown(KeyCode.Mouse0))

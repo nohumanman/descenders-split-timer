@@ -29,6 +29,7 @@ namespace ModLoaderSolution
 		static bool quietUpdate = false;
 		static string patchNotes = "- Errors caused by descenders update should be resolved\n- Framerate should be improved\n- Ragesquid should push new fix sometime 09-08\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Awake(){
 			Utilities.LogMethodCallStart();
 			if (debugState == DebugType.DEVELOPER)
@@ -52,7 +53,8 @@ namespace ModLoaderSolution
 			else
 				return version;
         }
-		void Start () {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
+        void Start () {
             Utilities.LogMethodCallStart();
 			Utilities.Log("Connecting to tcp server port " + port.ToString() + " with ip '" + ip + "'");
 			ConnectToTcpServer();
@@ -68,7 +70,8 @@ namespace ModLoaderSolution
 			return socketConnection != null && socketConnection.Connected;
 		}
 		bool poppedUp = false;
-		void Update()
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
+        void Update()
         {
             Utilities.LogMethodCallStart();
 			if (!poppedUp && Utilities.GetPlayer() != null)
