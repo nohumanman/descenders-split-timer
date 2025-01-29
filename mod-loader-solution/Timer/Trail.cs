@@ -158,8 +158,6 @@ namespace ModLoaderSolution
             string[] lines = textContents.Split('\n');
             List<string[]> csvContents = new List<string[]>();
             boundaries = new GameObject();
-            boundaries.GetComponent<MeshRenderer>().enabled = false;
-            boundaries.GetComponent<MeshCollider>().enabled = false;
             boundaries.name = "Boundaries";
             boundaries.transform.SetParent(this.transform);
             // make a huge boundary
