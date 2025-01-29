@@ -67,13 +67,10 @@ namespace ModLoaderSolution
             result.Apply();
             return result;
         }
-        GameObject Player;
         string GetObjectsAboutPlayer()
         {
-            if (Player == null)
-                Player = Utilities.GetPlayer();
             string objects = "";
-            Collider[] hitColliders = Physics.OverlapSphere(Player.transform.position, 2);
+            Collider[] hitColliders = Physics.OverlapSphere(Utilities.GetPlayer().transform.position, 2);
             foreach (Collider hitCollider in hitColliders)
                 if (hitCollider.gameObject.transform.root.gameObject.name != "Player_Human")
                     objects += hitCollider.gameObject.name + ", ";
@@ -102,11 +99,10 @@ namespace ModLoaderSolution
                 GUIStyle myButtonStyle2 = new GUIStyle(GUI.skin.button);
                 myButtonStyle2.normal.textColor = Color.white;
                 myButtonStyle2.normal.background = MakeTex(5, 5, new Color(0.2f, 0.06f, 0.12f));
-                myButtonStyle2.fontSize = 60;
-                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 80, 1500, 80), GetObjectsAboutPlayer(), myButtonStyle2);
-                GUI.Label(new Rect((Screen.width/2)-750, Screen.height- 200, 1500, 80), "scripts made with love by nohumanman :D", myButtonStyle2);
-                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 400, 1500, 80), Player.transform.position.ToString(), myButtonStyle2);
-                GUI.Label(new Rect((Screen.width / 2) - 750, Screen.height - 500, 1500, 80), Player.transform.rotation.eulerAngles.ToString(), myButtonStyle2);
+                myButtonStyle2.fontSize = 30;
+                // pos/rot
+                GUI.Label(new Rect(25, Screen.height - (Screen.height/8), 500, 80), "Rot:" + Utilities.GetPlayer().transform.rotation.eulerAngles, myButtonStyle2);
+                GUI.Label(new Rect(25, Screen.height - (Screen.height/8) - 100, 500, 80), "Pos:" + Utilities.GetPlayer().transform.position.ToString().ToString(), myButtonStyle2);
                 GUIStyle myButtonStyle = new GUIStyle(GUI.skin.button);
                 myButtonStyle.font = AssetBundling.Instance.bundle.LoadAsset<Font>("share-tech-mono.regular.ttf");
                 GUI.skin.font = AssetBundling.Instance.bundle.LoadAsset<Font>("share-tech-mono.regular.ttf");
@@ -251,15 +247,6 @@ namespace ModLoaderSolution
                         yPos += 25;
                     }
                     GUI.EndScrollView();
-                }
-                // display in-game chat
-                int width = 800;
-                yPos = 5;
-                GUI.TextArea(new Rect(1010, yPos, width, 400), Chat.instance.GetMessages());
-                yPos += 400;
-                Chat.instance.currentMessage = GUI.TextField(new Rect(1010, yPos, 3*(width/4), 25), Chat.instance.currentMessage);
-                if (GUI.Button(new Rect(1010+(3*(width/4)), yPos, width/4, 25), "SEND")) {
-                    Chat.instance.SendMessage();
                 }
             }
         }

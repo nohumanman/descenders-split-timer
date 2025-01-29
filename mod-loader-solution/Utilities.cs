@@ -297,9 +297,12 @@ namespace ModLoaderSolution
         }
         public bool isInReplayMode()
         {
-            if (Utilities.GameObjectFind("State_ReplayBrowser") != null)
-                return true;
-            return false;
+            using (new MethodAnalysis())
+            {
+                if (Utilities.GameObjectFind("State_ReplayBrowser") != null)
+                    return true;
+                return false;
+            }
         }
         public string GetBikeParkName(string seed)
         {
@@ -497,8 +500,11 @@ namespace ModLoaderSolution
         /// </summary>
         public static GameObject GetPlayer()
         {
-            playerObject = Singleton<PlayerManager>.SP.GetPlayerObject();
-            return playerObject;
+            using (new MethodAnalysis())
+            {
+                playerObject = Singleton<PlayerManager>.SP.GetPlayerObject();
+                return playerObject;
+            }
         }
 
         public PlayerInfoImpact GetPlayerInfoImpact()

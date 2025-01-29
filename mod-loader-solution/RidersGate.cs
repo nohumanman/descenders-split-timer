@@ -16,7 +16,7 @@ namespace ModLoaderSolution
 		}
 		public void Update()
         {
-			if (Input.GetKeyDown(KeyCode.G))
+            if (Input.GetKeyDown(KeyCode.G))
 			{
 				ToggleGate();
 				UserInterface.Instance.SpecialNotif("Gates toggled: " + gateEnabled.ToString());

@@ -55,16 +55,11 @@
     <Compile Include="AssetBundling.cs" />
     <Compile Include="BikeSwitcher.cs" />
     <Compile Include="ButtonHack.cs" />
-    <Compile Include="ChaosMod.cs" />
-    <Compile Include="Chat.cs" />
     <Compile Include="CustomDiscordManager.cs" />
-    <Compile Include="CustomTeleporter.cs" />
-    <Compile Include="CustomDebug.cs" />
-    <Compile Include="DisableOnAny.cs" />
-    <Compile Include="ErrorLogger.cs" />
     <Compile Include="FollowCamSystem.cs" />
     <Compile Include="Init.cs" />
     <Compile Include="Loader.cs" />
+    <Compile Include="MethodAnalysis.cs" />
     <Compile Include="Modifiers\CameraModifier.cs" />
     <Compile Include="Modifiers\FovModifier.cs" />
     <Compile Include="Modifiers\GimbalCam.cs" />
@@ -209,6 +204,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Security" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="TextMeshPro-1.0.55.2017.1.0b11">
       <HintPath>D:\Steam\steamapps\common\Descenders\Descenders_Data\Managed\TextMeshPro-1.0.55.2017.1.0b11.dll</HintPath>
@@ -407,7 +403,7 @@
   <PropertyGroup>
     <PostBuildEvent>
 
-copy "$(TargetPath)" "D:\SteamLibrary\steamapps\common\Descenders\Mods\50to01 Line\ModLoaderSolution.bin"  &amp;&amp; echo Copied to D:\SteamLibrary\steamapps\common\Descenders\Mods\50to01 Line\ModLoaderSolution.bin || exit /b 0
+copy "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Descenders\Mods\Igloo Bike Park\ModLoaderSolution.bin" || exit /b 0
 </PostBuildEvent>
   </PropertyGroup>
 </Project>
