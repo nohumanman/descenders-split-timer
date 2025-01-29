@@ -166,7 +166,7 @@ namespace ModLoaderSolution
             bigBoundary.transform.SetParent(boundaries.transform);
             bigBoundary.GetComponent<MeshRenderer>().enabled = false;
             bigBoundary.GetComponent<BoxCollider>().isTrigger = true;*/
-            GameObject checkpoints = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            GameObject checkpoints = new GameObject();
             checkpoints.name = "Checkpoints";
             checkpoints.transform.SetParent(transform);
             foreach (string line in lines)
