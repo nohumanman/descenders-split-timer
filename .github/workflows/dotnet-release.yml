@@ -25,7 +25,7 @@ jobs:
            if ($warnings -gt 0) { exit 1 }
            mv $Env:GITHUB_WORKSPACE\mod-loader-solution\bin\Debug\ModLoaderSolution.dll $Env:GITHUB_WORKSPACE\ModLoaderSolution.bin
       - name: Upload solution
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ModLoaderSolution
           path: ${{ github.workspace }}/ModLoaderSolution.bin
@@ -48,7 +48,7 @@ jobs:
         run: rm -r ${{ github.workspace }}/static/ModLoaderSolution.bin
 
       - name: Download artifact
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: ModLoaderSolution
           path: ${{ github.workspace }}/static/ModLoaderSolutionFiles
