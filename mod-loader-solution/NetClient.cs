@@ -455,6 +455,8 @@ namespace ModLoaderSolution
 				if (proceed)
                 {
 					GameObject trailParent = GameObject.CreatePrimitive(PrimitiveType.Cube);
+					trailParent.GetComponent<MeshRenderer>().enabled = false;
+					trailParent.GetComponent<MeshCollider>().enabled = false;
 					Trail tr = trailParent.AddComponent<Trail>();
 					tr.LoadFromUrl("https://modkit.nohumanman.com/static/trails/" + url);
 				}
