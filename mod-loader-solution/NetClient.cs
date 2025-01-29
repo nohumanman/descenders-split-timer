@@ -25,7 +25,7 @@ namespace ModLoaderSolution
 		List<string> messages = new List<string>();
 		public int port = 65432;
 		public string ip = "86.26.185.112";
-		static string version = "0.3.01";
+		static string version = "0.3.02";
 		static bool quietUpdate = false;
 		static string patchNotes = "- Errors caused by descenders update should be resolved\n- Framerate should be improved\n- Ragesquid should push new fix sometime 09-08\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
@@ -454,9 +454,7 @@ namespace ModLoaderSolution
 						proceed = false;
 				if (proceed)
                 {
-					GameObject trailParent = GameObject.CreatePrimitive(PrimitiveType.Cube);
-					trailParent.GetComponent<MeshRenderer>().enabled = false;
-					trailParent.GetComponent<MeshCollider>().enabled = false;
+					GameObject trailParent = new GameObject();
 					Trail tr = trailParent.AddComponent<Trail>();
 					tr.LoadFromUrl("https://modkit.nohumanman.com/static/trails/" + url);
 				}
