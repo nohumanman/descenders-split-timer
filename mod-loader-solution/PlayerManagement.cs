@@ -16,7 +16,8 @@ namespace ModLoaderSolution
 		public float speed;
 		bool wasBailed = false;
 		public static PlayerManagement Instance { get; private set; }
-		void Awake(){
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
+        void Awake(){
 			Utilities.Log("LocalApplicationData '" + Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "'");
 			Utilities.Log("Version number " + NetClient.GetVersion());
 			if (Instance != null && Instance != this) 
@@ -24,6 +25,7 @@ namespace ModLoaderSolution
 			else
 				Instance = this; 
 		}
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Update()
         {
             string currentMap = Utilities.instance.GetCurrentMap();

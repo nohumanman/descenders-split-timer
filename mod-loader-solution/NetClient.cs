@@ -25,23 +25,25 @@ namespace ModLoaderSolution
 		List<string> messages = new List<string>();
 		public int port = 65432;
 		public string ip = "86.26.185.112";
-		static string version = "0.3.01";
+		static string version = "0.3.02";
 		static bool quietUpdate = false;
 		static string patchNotes = "- Errors caused by descenders update should be resolved\n- Framerate should be improved\n- Ragesquid should push new fix sometime 09-08\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Awake(){
-			Utilities.LogMethodCallStart();
-			if (debugState == DebugType.DEVELOPER)
-				ip = "localhost";
-			DontDestroyOnLoad(this.gameObject.transform.root);
-			if (Instance != null && Instance != this) 
-				Destroy(this); 
-			else
-				Instance = this;
-			this.gameObject.AddComponent<Utilities>();
-			Utilities.Log("Version number " + version);
-			Application.logMessageReceived += Log;
-			Utilities.LogMethodCallEnd();
+			using (new MethodAnalysis())
+			{
+                if (debugState == DebugType.DEVELOPER)
+                    ip = "localhost";
+                DontDestroyOnLoad(this.gameObject.transform.root);
+                if (Instance != null && Instance != this)
+                    Destroy(this);
+                else
+                    Instance = this;
+                this.gameObject.AddComponent<Utilities>();
+                Utilities.Log("Version number " + version);
+                Application.logMessageReceived += Log;
+            }
 		}
 		public static string GetVersion()
         {
@@ -52,25 +54,28 @@ namespace ModLoaderSolution
 			else
 				return version;
         }
-		void Start () {
-            Utilities.LogMethodCallStart();
-			Utilities.Log("Connecting to tcp server port " + port.ToString() + " with ip '" + ip + "'");
-			ConnectToTcpServer();
-			ridersGates = FindObjectsOfType<RidersGate>();
-			if (new PlayerIdentification.SteamIntegration().getName() == "Descender")
-            {
-				Utilities.instance.ToggleGod();
-            }
-			Utilities.LogMethodCallEnd();
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
+		void Start()
+		{
+			using (new MethodAnalysis())
+			{
+				Utilities.Log("Connecting to tcp server port " + port.ToString() + " with ip '" + ip + "'");
+				ConnectToTcpServer();
+				ridersGates = FindObjectsOfType<RidersGate>();
+				if (new PlayerIdentification.SteamIntegration().getName() == "Descender")
+				{
+					Utilities.instance.ToggleGod();
+				}
+			}
 		}
 		public bool IsConnected()
         {
 			return socketConnection != null && socketConnection.Connected;
 		}
 		bool poppedUp = false;
-		void Update()
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
+        void Update()
         {
-            Utilities.LogMethodCallStart();
 			if (!poppedUp && Utilities.GetPlayer() != null)
             {
 				string lastVersion = "";
@@ -91,8 +96,11 @@ namespace ModLoaderSolution
 				}
 				File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Low\\RageSquid\\Descenders\\last_version.txt", NetClient.version);
 			}
-			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.P))
-				Application.OpenURL("https://modkit.nohumanman.com/trails");
+			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.P)) {
+                string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Low\\RageSquid\\Descenders\\method-calls.csv";
+                HolisticMethodAnalysis.WriteCalledMethodsToCsv(path);
+            }
+				
 			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.C))
             {
 				UserInterface.Instance.SpecialNotif("Collisions enabled: " + (!PlayerCollision).ToString());
@@ -121,7 +129,6 @@ namespace ModLoaderSolution
 				messages.Clear();
 			}
 			catch (InvalidOperationException){}
-			Utilities.LogMethodCallEnd();
 		}
 		private void ConnectToTcpServer () {
 			Utilities.LogMethodCallStart();
@@ -277,14 +284,6 @@ namespace ModLoaderSolution
 				Utilities.Log("Current Position: " + pos.ToString());
 				SendData("POS", pos.x, pos.y, pos.z);
             }
-			
-			if (message.StartsWith("CHAT_MESSAGE"))
-            {
-				string user = message.Split('|')[1];
-				string map = message.Split('|')[2];
-				string mess = message.Split('|')[3];
-				Chat.instance.GetMessage(user, map, mess);
-			}
 			if (message.StartsWith("SET_TEXT_COLOUR"))
             {
 				string r = message.Split('|')[1];
@@ -454,7 +453,7 @@ namespace ModLoaderSolution
 						proceed = false;
 				if (proceed)
                 {
-					GameObject trailParent = GameObject.CreatePrimitive(PrimitiveType.Cube);
+					GameObject trailParent = new GameObject();
 					Trail tr = trailParent.AddComponent<Trail>();
 					tr.LoadFromUrl("https://modkit.nohumanman.com/static/trails/" + url);
 				}

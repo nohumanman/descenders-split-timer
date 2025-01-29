@@ -29,6 +29,7 @@ namespace ModLoaderSolution
                     ExistingCamera.transform.SetParent(prevParent);
             }
         }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Update()
         {
             if (UseCustomCam)
@@ -82,8 +83,11 @@ namespace ModLoaderSolution
         }
         public void FindPlayer()
         {
-            if (PlayerHuman == null && Utilities.GetPlayer() != null)
-                PlayerHuman = Utilities.GetPlayer();
+            using (new MethodAnalysis())
+            {
+                if (PlayerHuman == null && Utilities.GetPlayer() != null)
+                    PlayerHuman = Utilities.GetPlayer();
+            }
         }
     }
 }

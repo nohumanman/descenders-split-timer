@@ -5,6 +5,7 @@ public class ObjEnabler : MonoBehaviour
 {
     public GameObject obj;
     public KeyCode key = KeyCode.Tab;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
     void Update()
     {
         if (Input.GetKeyDown(key) || Input.GetKeyDown(KeyCode.CapsLock))
