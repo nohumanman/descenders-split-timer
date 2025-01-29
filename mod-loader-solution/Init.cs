@@ -11,26 +11,29 @@ namespace ModLoaderSolution
     {
         IEnumerator DownloadModInjector()
         {
-            string binPath = (
-                Environment.CurrentDirectory
-                + "\\ModInjector.dll"
-            );
-            Utilities.Log("Mod injector path: " + binPath);
-            string url = "https://nohumanman.com/static/ModInjector.dll";
-            using (UnityWebRequest www = UnityWebRequest.Get(url))
+            using (new MethodAnalysis())
             {
-                yield return www.SendWebRequest();
-                if (www.isNetworkError || www.isHttpError)
-                    Utilities.Log(www.error);
-                else
+                string binPath = (
+                    Environment.CurrentDirectory
+                    + "\\ModInjector.dll"
+                );
+                Utilities.Log("Mod injector path: " + binPath);
+                string url = "https://nohumanman.com/static/ModInjector.dll";
+                using (UnityWebRequest www = UnityWebRequest.Get(url))
                 {
-                    try
+                    yield return www.SendWebRequest();
+                    if (www.isNetworkError || www.isHttpError)
+                        Utilities.Log(www.error);
+                    else
                     {
-                        System.IO.File.WriteAllBytes(binPath, www.downloadHandler.data);
-                    }
-                    catch (IOException)
-                    {
-                        Utilities.Log("IOException - dll write has failed!");
+                        try
+                        {
+                            System.IO.File.WriteAllBytes(binPath, www.downloadHandler.data);
+                        }
+                        catch (IOException)
+                        {
+                            Utilities.Log("IOException - dll write has failed!");
+                        }
                     }
                 }
             }
@@ -56,7 +59,6 @@ namespace ModLoaderSolution
                         { "CameraProps", typeof(CameraModifier) },
                         { "JsonRidersGate", typeof(RidersGate) },
                         { "ThreeDTimerJson", typeof(ThreeDTimer) },
-                        { "CustomRespawnJson", typeof(CustomTeleporter) },
                         { "MedalSystemInfo", typeof(MedalSystem) },
                         { "SlipModInfo", typeof(SlipModifier) }
                     };
@@ -98,10 +100,10 @@ namespace ModLoaderSolution
                 DontDestroyOnLoad(gameObject.transform.root);
                 List<Type> firstStartComponents = new List<Type>()
                 {
-                    typeof(ErrorLogger), typeof(NetClient), typeof(BikeSwitcher), typeof(TimeModifier),
+                    typeof(NetClient), typeof(BikeSwitcher), typeof(TimeModifier),
                     typeof(TrickCapturer), typeof(GimbalCam), typeof(MovableCam), typeof(TeleportAtCursor),
-                    typeof(StatsModification), typeof(UserInterface), typeof(ChaosMod), typeof(Chat), typeof(FollowCamSystem),
-                    typeof(CustomDebug), typeof(FovModifier), typeof(CustomDiscordManager), typeof(PlayerManagement)
+                    typeof(StatsModification), typeof(UserInterface), typeof(FollowCamSystem),
+                    typeof(FovModifier), typeof(CustomDiscordManager), typeof(PlayerManagement)
                 };
                 // add all components to be added on first load
                 foreach(Type component in firstStartComponents)

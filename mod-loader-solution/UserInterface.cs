@@ -252,15 +252,6 @@ namespace ModLoaderSolution
                     }
                     GUI.EndScrollView();
                 }
-                // display in-game chat
-                int width = 800;
-                yPos = 5;
-                GUI.TextArea(new Rect(1010, yPos, width, 400), Chat.instance.GetMessages());
-                yPos += 400;
-                Chat.instance.currentMessage = GUI.TextField(new Rect(1010, yPos, 3*(width/4), 25), Chat.instance.currentMessage);
-                if (GUI.Button(new Rect(1010+(3*(width/4)), yPos, width/4, 25), "SEND")) {
-                    Chat.instance.SendMessage();
-                }
             }
         }
         void GetAllPlayers()

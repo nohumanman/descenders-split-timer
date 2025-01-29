@@ -10,12 +10,12 @@ namespace ModLoaderSolution
 {
     public struct Method
     {
-        public string Name;
+        public string MethodName;
+        public string ClassName;
         public double TimeTaken;
     }
     public class MethodAnalysis : IDisposable
     {
-        string methodName;
         Stopwatch stopWatch = new Stopwatch();
         public MethodAnalysis()
         {
@@ -25,9 +25,15 @@ namespace ModLoaderSolution
         public void Dispose()
         {
             stopWatch.Stop();
-            var stackTrace = new StackTrace();
-            methodName = stackTrace.GetFrame(1)?.GetMethod()?.Name;
-            HolisticMethodAnalysis.methodsCalled.Add(new Method() { Name = methodName, TimeTaken = stopWatch.Elapsed.TotalMilliseconds });
+            StackTrace stackTrace = new StackTrace();
+            MethodBase method = stackTrace.GetFrame(1)?.GetMethod();
+            HolisticMethodAnalysis.methodsCalled.Add(
+                new Method() {
+                    MethodName = method.Name,
+                    ClassName = method.DeclaringType.Name,
+                    TimeTaken = stopWatch.Elapsed.TotalMilliseconds
+                }
+            );
         }
     }
     public static class HolisticMethodAnalysis
@@ -37,7 +43,7 @@ namespace ModLoaderSolution
         {
             string csv = "";
             foreach(Method method in methodsCalled)
-                csv += method.Name + "," + method.TimeTaken + "\n";
+                csv += method.MethodName + "," + method.ClassName + "," + method.TimeTaken + "\n";
             return csv;
         }
     }
