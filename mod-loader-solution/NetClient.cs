@@ -91,8 +91,11 @@ namespace ModLoaderSolution
 				}
 				File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Low\\RageSquid\\Descenders\\last_version.txt", NetClient.version);
 			}
-			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.P))
-				Application.OpenURL("https://modkit.nohumanman.com/trails");
+			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.P)) {
+				Debug.Log("LOGGING SCSVVV");
+                Debug.Log(HolisticMethodAnalysis.GetCalledMethodsAsCsv());
+            }
+				
 			if (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.C))
             {
 				UserInterface.Instance.SpecialNotif("Collisions enabled: " + (!PlayerCollision).ToString());

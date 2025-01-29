@@ -497,8 +497,11 @@ namespace ModLoaderSolution
         /// </summary>
         public static GameObject GetPlayer()
         {
-            playerObject = Singleton<PlayerManager>.SP.GetPlayerObject();
-            return playerObject;
+            using (new MethodAnalysis())
+            {
+                playerObject = Singleton<PlayerManager>.SP.GetPlayerObject();
+                return playerObject;
+            }
         }
 
         public PlayerInfoImpact GetPlayerInfoImpact()
