@@ -124,21 +124,21 @@ class UnitySocket():
 
     async def send_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """
+        leaderboard = str(self.convert_to_unity(self.get_speedrun_dot_com_leaderboard(trail_name)))
         await self.send(
             "SPEEDRUN_DOT_COM_LEADERBOARD|"
             + trail_name + "|"
-            + str(self.convert_to_unity(
-                self.get_speedrun_dot_com_leaderboard(trail_name)
-            ))
+            + leaderboard
         )
 
     async def send_speedrun_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """
+        leaderboard = await self.get_leaderboard(trail_name)
         await self.send(
             "LEADERBOARD|"
             + trail_name + "|"
             + str(
-                await self.get_leaderboard(trail_name)
+                leaderboard 
             )
         )
 
@@ -328,10 +328,6 @@ class UnitySocket():
                 f"Item redeemed by {self.info.steam_name}: {item[0]}",
                 1197188279158718486
             )
-    async def sanity_check(self):
-        """ Perform a sanity check on a player's data. """
-        # if no steam name, request it
-        pass
 
     async def get_default_bike(self):
         """ Get the async default bike for a player. """
@@ -396,7 +392,7 @@ class UnitySocket():
         if message_hash == our_message_hash:
             await self.send("RECEIVED|" + message_hash)
         else:
-            await self.log_line("FROM_SERVER: HASH FOR ", message, " DOES NOT MATCH!")
+            await self.log_line("FROM_SERVER: HASH FOR " + message + " DOES NOT MATCH!")
 
         for operator, function in operations.items():
             self.last_contact = time.time()
@@ -491,7 +487,6 @@ class UnitySocket():
         """ Called when a player enters a map. """
         self.info.world_name = map_name
         self.info.time_started = time.time()
-        await self.update_concurrent_users()
         # invalidate all trails
         await self.send("INVALIDATE_TIME|\\n")
         # remove all trails
@@ -517,22 +512,7 @@ class UnitySocket():
 
     async def on_map_exit(self):
         """ Called when a player exits a map. """
-        await self.update_concurrent_users()
         for trail_name, trail in self.trails.items():
             if trail_name in self.trails:
                 await trail.invalidate_timer("")
         self.trails = {}
-
-    async def update_concurrent_users(self):
-        """ Update the discord bot's presence with the number of concurrent users. """
-        discord_bot = self.parent.discord_bot
-        if discord_bot is None:
-            logging.info("tried to update users before discord bot was created")
-        try:
-            if discord_bot is not None:
-                asyncio.run(discord_bot.set_presence(
-                        str(len(self.parent.players))
-                        + " racers!"
-                ))
-        except RuntimeError:
-            logging.info("update_concurrent_users() called, but it's already being attempted")

@@ -147,7 +147,7 @@ class DBMS:
                 )
             trail = result.scalar_one_or_none()
             # If trail does not exist, create it
-            if not trail:
+            if trail is None:
                 trail = Trail(
                     trail_name=trail_name,
                     world_name=world_name
@@ -312,10 +312,10 @@ class DBMS:
             session.add(user)
             await session.commit()
 
-    async def get_personal_best_checkpoint_times(self, steam_id, trail_name, world_name):
+    async def get_personal_best_checkpoint_times(self, steam_id, trail_name, world_name) -> list[float]|None:  
         pass
 
-    async def get_global_best_checkpoint_times(self, trail_name, world_name):
+    async def get_global_best_checkpoint_times(self, trail_name, world_name) -> list[float]|None:
         pass
 
     async def get_recent_times(self, page=1, itemsPerPage=10, sortBy="submission_timestamp", sortDesc=False):
@@ -365,7 +365,7 @@ class DBMS:
                 )
             )            
             speeds = result.scalars().all()
-            return sum(speeds) / len(speeds) if speeds else None
+            return sum(speeds) / len(speeds) if speeds else 10000000000
 
     async def close(self):
         await self.engine.dispose()

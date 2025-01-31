@@ -109,20 +109,22 @@ class TrailTimer():
             self.timer_info.times.append(float(client_time))
 
             wr = await self.network_player.dbms.get_global_best_checkpoint_times(
-                self.trail_name
+                self.trail_name,
+                self.network_player.info.world_name
             )
             pb = await self.network_player.dbms.get_personal_best_checkpoint_times(
-                self.trail_name, self.network_player.info.steam_id
+                self.trail_name, self.network_player.info.steam_id,
+                self.network_player.info.world_name
             )
 
             total_checkpoints = self.timer_info.total_checkpoints - 1
             index = len(self.timer_info.times) - 1
-            if total_checkpoints == len(wr):
+            if wr is not None and total_checkpoints == len(wr):
                 time_diff = wr[index] - float(client_time)
             else:
                 time_diff = None
 
-            if total_checkpoints == len(pb):
+            if pb is not None and total_checkpoints == len(pb):
                 time_diff_local = pb[index] - float(client_time)
             else:
                 time_diff_local = None
@@ -168,10 +170,6 @@ class TrailTimer():
             return
         await self.network_player.send(f"INVALIDATE_TIME|{reason}\\n")
         self.timer_info.started = False
-
-    async def update_medals(self):
-        """ Update the medals for the player. """
-        await self.network_player.get_medals(self.trail_name)
 
     async def can_end(self) -> bool:
         """ Check if the data is valid to be able to end the timer """
@@ -275,37 +273,26 @@ class TrailTimer():
 
         async def discord_notif():
             # send the time to the discord server if it is a new fastest time
-            global_fastest = await self.network_player.dbms.get_global_best_checkpoint_times(self.trail_name)
-            if client_time < global_fastest[len(global_fastest)-1] and self.timer_info.auto_verify and can_end[0]:
+            global_fastest = await self.network_player.dbms.get_global_best_checkpoint_times(
+                self.trail_name,
+                self.network_player.info.world_name
+            )
+            if global_fastest is not None and client_time < global_fastest[len(global_fastest)-1] and self.timer_info.auto_verify and can_end[0]:
                 await self.__new_fastest_time(secs_str)
             # send the time to the discord server if it is a new fastest time
             our_fastest = await self.network_player.dbms.get_personal_best_checkpoint_times(
                 self.trail_name,
-                self.network_player.info.steam_id
+                self.network_player.info.steam_id,
+                self.network_player.info.world_name
             )
             if our_fastest is None or len(our_fastest) == 0:
                 fastest_pb = -1
             else:
                 fastest_pb = float(our_fastest[len(our_fastest)-1])
-            # send the time to the discord server if it is a new personal best
-            time_url = f"https://modkit.nohumanman.com/time/{time_id}"
-            # note: we use <= here because if the time is the same as the fastest pb, we still want to
-            #       send a message to discord
-            if ((client_time <= fastest_pb or fastest_pb == -1) and self.timer_info.auto_verify):
-                await self.network_player.parent.get_discord_bot().new_time(
-                    f"Automatically verified [a new pb]({time_url}) on '{self.trail_name}' by "
-                    f"'{self.network_player.info.steam_name}' of {secs_str}"
-                )
-            elif client_time <= fastest_pb or fastest_pb == -1:
-                await self.network_player.parent.get_discord_bot().new_time(
-                    f"<@&1166081385732259941> Please verify [the new pb time]({time_url}) on "
-                    f"'{self.trail_name}' by '{self.network_player.info.steam_name}' of {secs_str}"
-                )
         
         # update the leaderboards and medals on connected clients
         async def update():
             await self.update_leaderboards()
-            await self.update_medals()
         asyncio.create_task(update())
         await discord_notif()
         self.timer_info.auto_verify = True

@@ -43,7 +43,6 @@ class UnitySocketServer():
     async def delete_timed_out_players(self):
         """ Deletes players that have timed out """
         for player in self.players:
-            await player.sanity_check()
             if (time.time() - player.last_contact) > self.timeout:
                 logging.info("%s '%s' - contact timeout disconnect",
                              player.info.steam_id, player.info.steam_name)
