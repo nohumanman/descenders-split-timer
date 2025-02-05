@@ -53,7 +53,7 @@
         order: sortBy.length ? (sortBy[0].order === 'desc' ? 'desc' : 'asc') : '',
       })
 
-      const resp = await fetch(`${apiUrl}/api/get-total-stored-times`)
+      const resp = await fetch(`${apiUrl}/get-total-stored-times`)
       const num_tot = await resp.json()
 
       const response = await fetch(`${apiUrl}/get-all-times?${params.toString()}`)

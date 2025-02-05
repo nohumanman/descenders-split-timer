@@ -120,7 +120,7 @@ class Webserver():
                 self.get, ["GET"]
             ),
             WebserverRoute(
-                "/api/get-spectated", "get_spectated",
+                "/get-spectated", "get_spectated",
                 self.get_spectated, ["GET"]
             ),
             WebserverRoute(
@@ -136,11 +136,11 @@ class Webserver():
                 self.login, ["GET"]
             ),
             WebserverRoute(
-                "/api/spectate", "spectate",
+                "/spectate", "spectate",
                 self.spectate, ["GET"]
             ),
             WebserverRoute(
-                "/api/spectating/get-time", "get_spectating_time",
+                "/spectating/get-time", "get_spectating_time",
                 self.get_spectating_time, ["GET"]
             ),
             WebserverRoute(
@@ -180,13 +180,13 @@ class Webserver():
                 ["GET"]
             ),
             WebserverRoute(
-                '/api/get-total-stored-times',
+                '/get-total-stored-times',
                 'get_total_stored_times',
                 self.get_total_stored_times,
                 ['GET']
             ),
             WebserverRoute(
-                '/api/get-total-users-online',
+                '/get-total-users-online',
                 'get_total_users_online',
                 self.get_total_users_online,
                 ['GET']

@@ -214,7 +214,7 @@
       totalReplaySize.value = "ERROR ";
     });
   
-  fetch(`${apiUrl}/api/get-total-stored-times`)
+  fetch(`${apiUrl}/get-total-stored-times`)
     .then(response => response.json())
     .then(data => {
       // import as integer
@@ -225,7 +225,7 @@
       totalStoredTimes.value = "ERROR";
     });
   
-  fetch(`${apiUrl}/api/get-total-users-online`)
+  fetch(`${apiUrl}/get-total-users-online`)
     .then(response => response.json())
     .then(data => {
       totalUsersOnline.value = data;
@@ -234,7 +234,7 @@
     });
   
   var timestampThirtyDaysAgo = (new Date().getTime() - 30 * 24 * 60 * 60 * 1000) / 1000;
-  fetch(`${apiUrl}/api/get-total-stored-times?timestamp=` + timestampThirtyDaysAgo.toString())
+  fetch(`${apiUrl}/get-total-stored-times?timestamp=` + timestampThirtyDaysAgo.toString())
     
     .then(response => response.json())
     .then(data => {
