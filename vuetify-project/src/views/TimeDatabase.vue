@@ -42,6 +42,7 @@
   </template>  
 
   <script>
+  const apiUrl = import.meta.env.VITE_APP_API_URL;
   const FakeAPI = {
     async fetch ({ page, itemsPerPage, sortBy }) {
 
@@ -52,10 +53,10 @@
         order: sortBy.length ? (sortBy[0].order === 'desc' ? 'desc' : 'asc') : '',
       })
 
-      const resp = await fetch('http://localhost:8082/api/get-total-stored-times')
+      const resp = await fetch(`${apiUrl}/api/get-total-stored-times`)
       const num_tot = await resp.json()
 
-      const response = await fetch(`http://localhost:8082/get-all-times?${params.toString()}`)
+      const response = await fetch(`${apiUrl}/get-all-times?${params.toString()}`)
       const data = await response.json()
       // data is [{ name, bike, verified, version, game_version, time, submission_timestamp, time_id }, ...]
       

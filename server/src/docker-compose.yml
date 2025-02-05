@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  postgres:
+    container_name: postgres-database
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-schema:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  descenders-modkit:
+    container_name: backend
+    build: .
+    ports:
+      - "8082:8082"
+      - "65432:65432"
+    depends_on:
+      - postgres
+  
+  vuejs:
+    container_name: vuejs
+    build: ../../vuetify-project
+    ports:
+      - "801:80"
+    depends_on:
+      - descenders-modkit
+
+volumes:
+  postgres_data:

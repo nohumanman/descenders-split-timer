@@ -16,5 +16,10 @@
   </v-app>
 </template>
 
+<script setup>
+  const apiUrl = import.meta.env.VITE_APP_API_URL;
+  console.log(apiUrl);
+</script>
+
 
 

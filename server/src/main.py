@@ -33,7 +33,7 @@ def setup_logging():
 def initialize_components():
     """Initialize all the components for the server."""
     # Database Management System
-    dbms = DBMS("postgresql+asyncpg://postgres:postgres@localhost/postgres")
+    dbms = DBMS("postgresql+asyncpg://postgres:postgres@postgres/postgres")
 
     # Unity Socket Server
     unity_socket_server = UnitySocketServer(UNITY_SOCKET_IP, UNITY_SOCKET_PORT, dbms)
