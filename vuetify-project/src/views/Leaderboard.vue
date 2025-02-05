@@ -41,7 +41,7 @@
                 {{ item.name }}
               </template>
               <template v-slot:item.time="{ item }">
-                {{ item.time }}
+                {{ secs_to_str(item.time) }}
               </template>
               <template v-slot:item.time_id="{ item }">
                 <v-btn :href="'/time/' + item.time_id">
@@ -56,7 +56,9 @@
     </v-container>
   </template>
 
+
 <script>
+const apiUrl = import.meta.env.VITE_APP_API_URL;
 export default {
   name: 'Leaderboard',
   data () {
@@ -74,15 +76,15 @@ export default {
   methods: {
     async getLeaderboard(trail) {
       // for each trail in trail, find the leaderboard
-      const response = await fetch('http://localhost:8082/get-leaderboard?trail_name=' + trail.trail_name + '&world_name=' + trail.world_name);
+      const response = await fetch(`${apiUrl}/get-leaderboard?trail_name=${trail.trail_name}&world_name=${trail.world_name}`);
       const data = await response.json();
       return data;
     },
   },
   mounted () {
-    fetch('http://localhost:8082/get-trails')
+    fetch(`${apiUrl}/get-trails`)
       .then(response => response.json())
-    fetch('http://localhost:8082/get-trails')
+    fetch(`${apiUrl}/get-trails`)
       .then(response => response.json())
       .then(async data => {
         this.trails = data["trails"];

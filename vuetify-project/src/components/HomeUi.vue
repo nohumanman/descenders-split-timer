@@ -197,6 +197,7 @@
 </script>
 
 <script>
+  const apiUrl = import.meta.env.VITE_APP_API_URL;
   import { ref } from 'vue'
 
   var totalReplaySize = ref(0)
@@ -204,8 +205,7 @@
   var totalUsersOnline = ref(0)
   var timesSubmittedPast30Days = ref(0)
 
-  
-  fetch('http://localhost:8082/get-gb-stored-replays')
+  fetch(`${apiUrl}/get-gb-stored-replays`)
     .then(response => response.json())
     .then(data => {
       totalReplaySize.value = data;
@@ -214,7 +214,7 @@
       totalReplaySize.value = "ERROR ";
     });
   
-  fetch('http://localhost:8082/api/get-total-stored-times')
+  fetch(`${apiUrl}/get-total-stored-times`)
     .then(response => response.json())
     .then(data => {
       // import as integer
@@ -225,7 +225,7 @@
       totalStoredTimes.value = "ERROR";
     });
   
-  fetch('http://localhost:8082/api/get-total-users-online')
+  fetch(`${apiUrl}/get-total-users-online`)
     .then(response => response.json())
     .then(data => {
       totalUsersOnline.value = data;
@@ -234,7 +234,7 @@
     });
   
   var timestampThirtyDaysAgo = (new Date().getTime() - 30 * 24 * 60 * 60 * 1000) / 1000;
-  fetch('http://localhost:8082/api/get-total-stored-times?timestamp=' + timestampThirtyDaysAgo.toString())
+  fetch(`${apiUrl}/get-total-stored-times?timestamp=` + timestampThirtyDaysAgo.toString())
     
     .then(response => response.json())
     .then(data => {

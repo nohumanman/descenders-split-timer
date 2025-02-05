@@ -71,12 +71,12 @@ import { routes } from '@/router'
 </script>
 
 <script setup>
+  const apiUrl = import.meta.env.VITE_APP_API_URL;
   import { useDisplay } from 'vuetify'
   const { xs, sm } = useDisplay()
 
   var isOnline = true;
-
-  fetch('http://localhost:8082/get-trails')
+  fetch(`${apiUrl}/get-trails`)
     .then(data => {
         isOnline = true;
     })
