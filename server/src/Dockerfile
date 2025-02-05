@@ -21,5 +21,7 @@ EXPOSE 65432
 # expose webserver port
 EXPOSE 8082
 
+RUN ls -l /app/requirements.txt
+
 # run application
-CMD ["python", "main.py"]
+CMD ["hypercorn", "main:webserver_app", "-b", "0.0.0.0:8082"]

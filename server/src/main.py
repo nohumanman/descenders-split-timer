@@ -7,6 +7,7 @@ from discord_bot import DiscordBot
 from tokens import DISCORD_TOKEN
 from webserver import Webserver
 from dbms import DBMS
+from tokens import POSTGRES_DB, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_USER
 
 # Constants for configuration
 UNITY_SOCKET_IP = "0.0.0.0"
@@ -33,7 +34,8 @@ def setup_logging():
 def initialize_components():
     """Initialize all the components for the server."""
     # Database Management System
-    dbms = DBMS("postgresql+asyncpg://postgres:postgres@postgres/postgres")
+    dbms_url = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}"
+    dbms = DBMS(dbms_url)
 
     # Unity Socket Server
     unity_socket_server = UnitySocketServer(UNITY_SOCKET_IP, UNITY_SOCKET_PORT, dbms)
@@ -69,24 +71,23 @@ def run_server_in_thread(webserver):
         debug=False, ssl_context='adhoc'
     )
 
-# Main entry point
-def main():
-    """Main function to set up and run the server."""
-    # Set the working directory to the script path
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-    # Setup logging
-    #setup_logging()
+"""Main function to set up and run the server."""
+# Set the working directory to the script path
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-    # Initialize components
-    unity_socket_server, webserver, discord_bot, dbms = initialize_components()
+# Setup logging
+#setup_logging()
 
-    # Start Unity Socket Server
-    start_unity_socket_server(unity_socket_server)
+# Initialize components
+unity_socket_server, webserver, discord_bot, dbms = initialize_components()
 
-    # Run the webserver in a separate thread
-    run_server_in_thread(webserver)
+# Start Unity Socket Server
+start_unity_socket_server(unity_socket_server)
 
-# Entry point to execute the script
+# Run the webserver in a separate thread
+#run_server_in_thread(webserver)
+webserver_app = webserver.webserver_app
+
 if __name__ == "__main__":
-    main()
+    run_server_in_thread(webserver)
