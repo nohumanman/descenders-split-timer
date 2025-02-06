@@ -1,0 +1,66 @@
+services:
+  postgres:
+    container_name: posgres
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-schema:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web-api:
+    container_name: web-api
+    build:
+      context: .
+      dockerfile: web-api/Dockerfile
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres
+    volumes:
+      - ./replays:/app/replays
+    environment:
+      - POSTGRES_HOST=postgres:5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=postgres
+    env_file:
+      - path: .env.private-tokens
+  
+  websocket-api:
+    container_name: websocket-api
+    build:
+      context: .
+      dockerfile: websocket-api/Dockerfile
+    ports:
+      - "65432:65432"
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST=postgres:5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=postgres
+    env_file:
+      - path: .env.private-tokens
+
+  vuejs:
+    container_name: vuejs
+    build: vuejs/
+    ports:
+      - "801:80"
+    depends_on:
+      - websocket-api
+      - web-api
+
+volumes:
+  postgres_data:

@@ -35,15 +35,9 @@ Once you open a map that loads the modkit, the **modkit is loaded for the rest o
 Please [see the wiki]() for information on how to use features in this toolkit.
 
 ### For contributors
-There are 3 main parts to this modkit:
-- [The Server](/server/) that handles HTTP and socket requests from the client and communicates with the database.
-- [Client loaded scripts](/mod-loader-solution/) that are injected into the game in order to communicate with the server.
-- [Unity project](/unity-project/) that contains the assets and scripts that are loaded into the game.
-
-Please see the READMEs in each folder for more information.
+Please refer to the [Contributor's Guide]() that contains information about system architecture, containers, deployment.
 
 ## Implementations
-This modkit is implemented, to some capacity, on 
 - **[Igloo Bike Park](https://mod.io/g/descenders/m/igloo-bike-park)** by *[antgrass](https://mod.io/g/descenders/u/antgrass)*
 - **[Montcerf](https://mod.io/g/descenders/m/montcerf)** by *[antgrass](https://mod.io/g/descenders/u/antgrass)*
 - **[Hedgecock](https://mod.io/g/descenders/m/hedgecock)** by *[antgrass](https://mod.io/g/descenders/u/antgrass)*
@@ -56,19 +50,9 @@ BI0S0CK](https://mod.io/g/descenders/u/bi0s0ck)*
 - **[Fort William 4x](https://mod.io/g/descenders/m/fort-william-4x)** by *[BBB171](https://mod.io/g/descenders/u/bbb1711)*
 - **[50to01 Line](https://mod.io/g/descenders/m/50to01-line)** by *[antgrass](https://mod.io/g/descenders/u/antgrass)*
 
-### List of features & fixes
+Some maps don't have timers and only use the modkit for features it provides (e.g. bike switcher).
 
-- Timer that records split times for a track
-- Boundary detection for times on a track (with manual verification possible via a replay)
-- Leaderboard that displays times for a track
-- Leaderboard that displays times from speedrun.com for a track
-- Bike switcher (use caps lock) that allows you to switch between bikes (including bmx)
-- (map-specific) Gate that is synced between players
-- (map-specific) 3D Text of the timer
-- Stats modification for the bike (acceleration, airFriction, rollResistance, etc.)
-- Fix for music repeating constantly in mod maps
-- Adds discord rich presence for mod maps
-- Mods in the mod browser order alphabetically
-- Remove mod of the year leaderboard from 2020 from the lobby
+## Contributor Guide
+### Systems Architecture
+<img src="docs/assets/system-architecture.svg">
 
-and more..
