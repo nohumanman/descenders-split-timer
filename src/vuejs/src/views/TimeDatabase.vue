@@ -20,6 +20,7 @@
           :search="search"
           item-value="name"
           @update:options="loadItems"
+          :sort-by="sortBy" 
         >
         <template v-slot:item.verified="{ item }">
           <v-icon v-if="item.verified" color="success">mdi-check</v-icon>
@@ -73,6 +74,7 @@
   export default {
     data: () => ({
       itemsPerPage: 10,
+      sortBy: [{ key: 'submission_timestamp', order: 'desc' }],
       headers: [
         { title: 'Player Name', key: 'name', align: 'start', },
         { title: 'Bike Type', key: 'bike', align: 'end' },

@@ -112,7 +112,7 @@ class UnitySocket():
 
     async def send_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """
-        leaderboard = str(self.convert_to_unity(self.get_speedrun_dot_com_leaderboard(trail_name)))
+        leaderboard = str(await self.convert_to_unity(await self.get_speedrun_dot_com_leaderboard(trail_name)))
         await self.send(
             "SPEEDRUN_DOT_COM_LEADERBOARD|"
             + trail_name + "|"
@@ -190,7 +190,7 @@ class UnitySocket():
                     "You went through the start too fast!"
                 )
 
-    def convert_to_unity(self, leaderboard):
+    async def convert_to_unity(self, leaderboard):
         """ Convert a leaderboard data structure to a Unity-friendly format. """
         if len(leaderboard) == 0:
             return {}
@@ -207,7 +207,7 @@ class UnitySocket():
         """
         Get and convert the leaderboard data for a specific trail to a Unity-friendly format.
         """
-        return self.convert_to_unity(
+        return await self.convert_to_unity(
             [
                 {
                     "place": leaderboard["place"],
@@ -223,7 +223,7 @@ class UnitySocket():
             ]
         )
 
-    def get_speedrun_dot_com_leaderboard(self, trail_name):
+    async def get_speedrun_dot_com_leaderboard(self, trail_name):
         """ Retrieve the leaderboard data for a specific trail from Speedrun.com """
         api = srcomapi.SpeedrunCom()
         game = api.get_game("Descenders")
@@ -255,7 +255,7 @@ class UnitySocket():
             self.info.steam_name, steam_name
         )
         self.info.steam_name = steam_name
-        if self.info.steam_id is not None:
+        if self.info.steam_id != "":
             await self.has_both_steam_name_and_id()
 
     async def ban(self, _type: str):
@@ -268,17 +268,10 @@ class UnitySocket():
 
     async def has_both_steam_name_and_id(self):
         """ Called when a player has both a steam name and id. """
-        try:
-            await self.dbms.update_player(
-                self.info.steam_id,
-                self.info.steam_name
-            )
-        except sqlite3.IntegrityError:
-            # integrity error - so we probably have some bad input data
-            await self.send("SUCCESS") # ask for all our data again
-            self.info.steam_id = ""
-            self.info.steam_name = ""
-            return
+        await self.dbms.update_player(
+            self.info.steam_id,
+            self.info.steam_name
+        )
         for player in self.parent.players:
             if (
                 player.info.steam_id == self.info.steam_id
@@ -299,7 +292,7 @@ class UnitySocket():
             self.info.steam_name, steam_id
         )
         self.info.steam_id = steam_id
-        if self.info.steam_name is not None:
+        if self.info.steam_name != "":
             await self.has_both_steam_name_and_id()
         # if id is not the correct length, ban the player
         if len(steam_id) != len("76561198805366422"):

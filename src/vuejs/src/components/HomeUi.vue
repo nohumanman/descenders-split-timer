@@ -128,7 +128,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="totalUsersOnline == 'ERROR'"
+            :loading="timesSubmittedPast30Days == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
@@ -143,7 +143,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="totalUsersOnline == 'ERROR'"
+            :loading="totalStoredTimes == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
@@ -157,7 +157,7 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="totalUsersOnline == 'ERROR'"
+            :loading="totalReplaySize == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
@@ -204,6 +204,10 @@
   var totalStoredTimes = ref(0)
   var totalUsersOnline = ref(0)
   var timesSubmittedPast30Days = ref(0)
+  totalReplaySize.value = "ERROR";
+  totalStoredTimes.value = "ERROR";
+  totalUsersOnline.value = "ERROR";
+  timesSubmittedPast30Days.value = "ERROR";
 
   fetch(`${apiUrl}/get-gb-stored-replays`)
     .then(response => response.json())

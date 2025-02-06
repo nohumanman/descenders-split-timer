@@ -95,28 +95,23 @@ class DBMS:
     """ A simple Database Management System (DBMS) class for managing data using SQLAlchemy. """
 
     def __init__(self, db_url: str):
-        self.engine = create_async_engine(db_url, echo=False)
+        # check if db_url is connectable
+        self.engine = create_async_engine(db_url, echo=False, pool_size=20, max_overflow=0)
         self.async_session = sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
-        self.session_context = contextvars.ContextVar("session_context")
 
-    def get_session(self) -> Session:
-        """Retrieve the current session from the context variable or create a new one."""
-        session = self.session_context.get(None)
-        if session is None:
-            # Create a new session if it doesn't exist in the current coroutine
-            session = self.async_session()
-            self.session_context.set(session)
-        return session
-
-    async def init_db(self):
-        """Initialize the database and create all tables."""
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    async def db_connected(self):
+        try:
+            async with self.engine.connect() as conn:
+                await conn.execute(select(1))
+            return True
+        except Exception as e:
+            logging.error(f"Database connection failed: {e}")
+            return False
 
     async def get_id_from_name(self, steam_name):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Player).filter_by(steam_name=steam_name))
             player = result.scalar_one_or_none()
             return player.steam_id if player else None
@@ -125,7 +120,7 @@ class DBMS:
         '''
         Update the player's steam name and id.
         '''
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             player = await session.get(Player, steam_id)
             if player:
                 player.steam_name = steam_name
@@ -135,7 +130,7 @@ class DBMS:
             await session.commit()
 
     async def get_player(self, steam_id):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             player = await session.get(Player, steam_id)
             # if player does not exist, add it and return None
             if not player:
@@ -145,12 +140,12 @@ class DBMS:
             return player.steam_name if player else None
 
     async def get_all_players(self):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Player))
             return result.scalars().all()
 
     async def get_trail_id(self, trail_name, world_name):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(
                 select(Trail).filter_by(
                     trail_name=trail_name,
@@ -187,7 +182,7 @@ class DBMS:
         await self.get_player(steam_id) # Ensure player exists
         if auto_verify:
             await self.submit_time_verification(player_time_id, 0, True)
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             new_time = PlayerTime(
                 player_time_id=player_time_id,
                 steam_id=steam_id,
@@ -214,7 +209,7 @@ class DBMS:
         return player_time_id
 
     async def get_total_stored_times(self, timestamp: int = 0) -> int:
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(
                 select(FinalTimesDetailed)
                 .where(FinalTimesDetailed.submission_timestamp > timestamp)
@@ -222,7 +217,7 @@ class DBMS:
             return len(result.scalars().all())
 
     async def get_trails(self) -> list[Trail]:
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(Trail))
             trails = result.scalars().all()
             return [
@@ -240,7 +235,7 @@ class DBMS:
             num=10,
             verified=True
         ) -> list[dict]:
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             query = select(FinalTimesDetailed).filter_by(deleted=False, verified=verified)
             if trail_name is not None and world_name is not None:
                 query = query.join(Trail, Trail.trail_id == FinalTimesDetailed.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
@@ -268,13 +263,13 @@ class DBMS:
             ]
     
     async def delete_time(self, time_id):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             time = await session.get(PlayerTime, time_id)
             time.deleted = True
             await session.commit()
     
     async def get_time(self, time_id):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             time = await session.get(PlayerTime, time_id)
             return {
                 "starting_speed": time.starting_speed,
@@ -291,7 +286,7 @@ class DBMS:
             verifier_id: int,
             verified: bool
         ):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             verification = Verification(
                 verifier_id=verifier_id,
                 verification_timestamp=time.time(),
@@ -302,18 +297,18 @@ class DBMS:
             await session.commit()
 
     async def authorise_discord_user(self, discord_id):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             user = await session.get(WebsiteUser, discord_id)
             user.authorised = True
             await session.commit()
     
     async def get_discord_user(self, discord_id):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             user = await session.get(WebsiteUser, discord_id)
             return user
     
     async def add_discord_user(self, discord_id, steam_id, discord_name):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             user = WebsiteUser(
                 discord_id=discord_id,
                 steam_id=steam_id,
@@ -330,7 +325,7 @@ class DBMS:
         pass
 
     async def get_recent_times(self, page=1, itemsPerPage=10, sortBy="submission_timestamp", sortDesc=False):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             query = select(FinalTimesDetailed)
             # TODO: This should be a dictionary
             if sortBy == "submission_timestamp":
@@ -366,7 +361,7 @@ class DBMS:
             ]
 
     async def get_trail_average_starting_speed(self, trail_name, world_name):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(
                 select(PlayerTime.starting_speed)
                 .join(Trail, Trail.trail_id == PlayerTime.trail_id)
@@ -382,7 +377,7 @@ class DBMS:
         await self.engine.dispose()
     
     async def get_pending_items(self, steam_id) -> list[PendingItems]:
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             result = await session.execute(select(PendingItems).filter_by(
                 steam_id=steam_id,
                 time_redeemed=None
@@ -390,7 +385,7 @@ class DBMS:
             return result.scalars().all()
     
     async def redeem_pending_item(self, steam_id, item_id):
-        async with self.get_session().begin() as session:
+        async with self.async_session() as session:
             pending_item = await session.get(PendingItems, (steam_id, item_id, None))
             if pending_item:
                 pending_item.time_redeemed = time.time()
