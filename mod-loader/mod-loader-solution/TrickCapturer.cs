@@ -14,7 +14,6 @@ using ModTool;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using TMPro;
-using InControl;
 
 namespace ModLoaderSolution
 {

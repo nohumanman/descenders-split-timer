@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using ModLoaderSolution;
 using System.IO;
 using System.Collections;
-using static MeshCombineStudio.MeshCombiner;
 
 namespace ModLoaderSolution
 {
