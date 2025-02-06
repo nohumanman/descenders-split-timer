@@ -54,5 +54,5 @@ Some maps don't have timers and only use the modkit for features it provides (e.
 
 ## Contributor Guide
 ### Systems Architecture
-<img src="assets/system-architecture.svg">
+<img src="docs/assets/system-architecture.svg">
 
