@@ -23,14 +23,11 @@ from authlib.integrations.requests_client import OAuth2Session
 from authlib.integrations.base_client import MissingTokenError
 from authlib.integrations.base_client.errors import InvalidTokenError
 
-# Unity Socket Server imports
-from unity_socket_server import UnitySocketServer, PlayerNotFound
-
 # Database Management System imports
-from dbms import DBMS
+from common.dbms import DBMS
 
 # Tokens imports
-from tokens import OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET
+from common.tokens import OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET
 
 # Used to fix RuntimeError in using async from thread
 import nest_asyncio
@@ -38,7 +35,7 @@ nest_asyncio.apply()
 
 if TYPE_CHECKING:
     # Imports related to the Discord bot (if any)
-    from discord_bot import DiscordBot
+    from common.discord_bot import DiscordBot
 
 OAUTH2_REDIRECT_URI = 'https://modkit.nohumanman.com/callback'
 API_BASE_URL = os.environ.get('API_BASE_URL', 'https://discordapp.com/api')
@@ -83,12 +80,11 @@ class WebserverRoute():
 
 class Webserver():
     """ Used to host the website using flask """
-    def __init__(self, socket_server: UnitySocketServer, dbms : DBMS):
+    def __init__(self, dbms : DBMS):
         self.dbms = dbms
         self.webserver_app = webserver_app
         self.webserver_app = cors(self.webserver_app)
         self.webserver_app.config['SECRET_KEY'] = OAUTH2_CLIENT_SECRET
-        self.socket_server: UnitySocketServer = socket_server
         self.discord_bot: DiscordBot | None = None
         self.routes = [
             WebserverRoute(
@@ -116,32 +112,12 @@ class Webserver():
                 self.get_all_times, ["GET"]
             ),
             WebserverRoute(
-                "/get", "get",
-                self.get, ["GET"]
-            ),
-            WebserverRoute(
-                "/get-spectated", "get_spectated",
-                self.get_spectated, ["GET"]
-            ),
-            WebserverRoute(
-                "/eval/<player_id>", "eval",
-                self.eval, ["GET"]
-            ),
-            WebserverRoute(
                 "/verify_time/<time_id>", "verify_time",
                 self.verify_time, ["GET"]
             ),
             WebserverRoute(
                 "/login", "login",
                 self.login, ["GET"]
-            ),
-            WebserverRoute(
-                "/spectate", "spectate",
-                self.spectate, ["GET"]
-            ),
-            WebserverRoute(
-                "/spectating/get-time", "get_spectating_time",
-                self.get_spectating_time, ["GET"]
             ),
             WebserverRoute(
                 "/concurrency", "concurrency",
@@ -186,11 +162,11 @@ class Webserver():
                 ['GET']
             ),
             WebserverRoute(
-                '/get-total-users-online',
-                'get_total_users_online',
-                self.get_total_users_online,
+                '/get-gb-stored-replays',
+                'get_gb_stored_replays',
+                self.get_gb_stored_replays,
                 ['GET']
-            )
+            ),
         ]
         self.tokens_and_ids = {}
         import asyncio
@@ -206,16 +182,11 @@ class Webserver():
                 methods=route.methods
             )
 
-    async def get_total_users_online(self):
-        """Get the total number of users online"""
-        return str(len(self.socket_server.players))
-
-    @webserver_app.route("/get-gb-stored-replays")
-    async def get_gb_stored_replays():
-        """Get the file size of static/replays in GB """
+    async def get_gb_stored_replays(self):
+        """Get the file size of replays in GB """
         return str(round(sum(
-            os.path.getsize(f"static/replays/{f}")
-            for f in os.listdir("static/replays")
+            os.path.getsize(f"replays/{f}")
+            for f in os.listdir("replays")
         ) / 1_000_000_000, 2))
     
     async def get_total_stored_times(self):
@@ -229,87 +200,13 @@ class Webserver():
         except asyncio.exceptions.CancelledError:
             return jsonify({})
 
-    async def spectate(self):
-        """ Function to spectate a player """
-        # get our player id
-        try:
-            our_id = await self.get_our_steam_id()
-        except (InvalidTokenError, MissingTokenError):
-            return ("ERROR - NOT LOGGED IN!", 500)
-        # get us
-        try:
-            us = self.socket_server.get_player_by_id(str(our_id))
-        except PlayerNotFound:
-            return f"Failed to find you! your id : {our_id}"
-        target_id = request.args.get("target_id")
-        us.info.spectating = self.socket_server.get_player_by_id(
-            target_id
-        ).info.steam_name
-        us.info.spectating_id = target_id
-        # send the spectate command
-        await us.send(f"SPECTATE|{target_id}")
-        return "Success"
-
-    async def eval(self, player_id):
-        """ Function to evaluate commands sent to player with id player_id """
-        if await self.permission() == "AUTHORISED":
-            args = request.args.get("order")
-            try:
-                if args is None:
-                    return "Failed - no args"
-                await self.socket_server.get_player_by_id(player_id).send(args)
-            except PlayerNotFound:
-                return "Player not found"
-            return ""
-        return "FAILED - NOT VALID PERMISSIONS!", 401
-
     async def get_replay(self, time_id):
         """ Function to get the replay of a time with id time_id """
         time_id = time_id.split(".")[0]
         try:
-            return send_file(
-                "static/replays/" + time_id + ".replay",
-                download_name=f"{await self.dbms.get_replay_name_from_id(time_id)}.replay"
-            )
+            return send_file("replays/" + time_id + ".replay")
         except FileNotFoundError:
             return "No replay found!"
-
-    async def get_spectated(self):
-        """ Function to get the player we are spectating """
-        our_id = request.args.get("my_id")
-        try:
-            us = self.socket_server.get_player_by_id(str(our_id))
-        except PlayerNotFound:
-            return f"Failed to find you! your id : {our_id}"
-        return us.info.spectating
-
-    async def get_spectating_time(self):
-        """ Function to get the times of the player we are spectating """
-        our_id = request.args.get("my_id")
-        # get time
-        trail_time = {}
-        time_started = 0
-        while not trail_time or str(trail_time) == str(session['previous_result']):
-            try:
-                us = self.socket_server.get_player_by_id(str(our_id))
-            except PlayerNotFound:
-                return f"Failed to find you! your id : {our_id}"
-            try:
-                spectating = self.socket_server.get_player_by_id(us.info.spectating_id)
-            except PlayerNotFound:
-                return "Failed to find player you are spectating"
-            for trail_name in spectating.trails:
-                trail = await spectating.get_trail(trail_name)
-                if trail.timer_info.started:
-                    trail_time = {"time": trail.timer_info.time_started, "started": True, "times": trail.timer_info.times}
-                    break
-                if trail.timer_info.time_started > time_started:
-                    if len(trail.timer_info.times) != 0:
-                        trail_time = {"time": trail.timer_info.times[-1], "started": False, "times": trail.timer_info.times}
-                    time_started = trail.timer_info.time_started
-            time.sleep(0.1)
-        session['previous_result'] = str(trail_time)
-        return jsonify(trail_time)
 
     async def verify_time(self, time_id):
         """ Function to verify a time with id time_id """
@@ -360,32 +257,6 @@ class Webserver():
                 )
             return lines
         return "You are not authorised to fetch output log."
-
-    async def get(self):
-        """ Function to get the details of a player with id player_id """
-        if True:
-            player_json = [
-                {
-                    "steam_id": player.info.steam_id,
-                    "steam_name": player.info.steam_name,
-                    "steam_avatar_src": await player.get_avatar_src(),
-                    "reputation": player.info.reputation,
-                    "total_time": "",#player.get_total_time(),
-                    "time_on_world": "",#player.get_total_time(onWorld=True),
-                    "world_name": player.info.world_name,
-                    "last_trick": player.info.last_trick,
-                    "version": player.info.version,
-                    "bike_type": player.info.bike_type,
-                    "trail_info": str(player.trails),
-                    "address": ""#(lambda: player.addr if self.permission() == "AUTHORISED" else "")()
-                } for player in self.socket_server.players
-            ]
-            return jsonify({"players": player_json})
-        else:
-            # return json of every map and amount of players in it
-            return jsonify({"state": {
-                "players": len(self.socket_server.players)
-            }})
 
     async def get_trails(self):
         """ Function to get the trails """ 

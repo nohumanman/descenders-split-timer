@@ -23,12 +23,12 @@ namespace ModLoaderSolution
 		private Thread clientReceiveThread;
 		bool PlayerCollision = false;
 		List<string> messages = new List<string>();
-		public int port = 65433;
+		public int port = 65432;
 		public string ip = "86.26.185.112";
 		static string version = "0.3.02";
 		static bool quietUpdate = false;
 		static string patchNotes = "- Errors caused by descenders update should be resolved\n- Framerate should be improved\n- Ragesquid should push new fix sometime 09-08\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
-		public static DebugType debugState = DebugType.DEBUG;
+		public static DebugType debugState = DebugType.DEVELOPER;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Awake(){
 			using (new MethodAnalysis())

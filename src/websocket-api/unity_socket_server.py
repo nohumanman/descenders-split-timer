@@ -6,10 +6,10 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 import logging
 from unity_socket import UnitySocket
-from dbms import DBMS
+from common.dbms import DBMS
 
 if TYPE_CHECKING: # for imports with intellisense
-    from discord_bot import DiscordBot
+    from common.discord_bot import DiscordBot
 
 class PlayerNotFound(Exception):
     """ Exception called when the descenders unity client could not be found """
@@ -17,12 +17,12 @@ class PlayerNotFound(Exception):
 
 class UnitySocketServer():
     """ Used to communicate quickly with the Descenders Unity client. """
-    def __init__(self, ip: str, port: int, dbms: DBMS):
+    def __init__(self, ip: str, port: int, dbms: DBMS, discord_bot):
         self.host = ip
         self.port = port
         self.dbms = dbms
         self.timeout = 120
-        self.discord_bot : DiscordBot | None = None
+        self.discord_bot : DiscordBot | None = discord_bot
         self.website_socket_server = None
         self.players: list[UnitySocket] = []
 
@@ -78,7 +78,7 @@ class UnitySocketServer():
 
     async def create_client(self, reader: StreamReader, writer: StreamWriter):
         """ Creates a client from their socket and address """
-        logging.info("create_client")
+        print("create_client")
         await self.delete_timed_out_players()
         player = self.get_player_by_addr(writer.get_extra_info('peername'))
         if player is None:

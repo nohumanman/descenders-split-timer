@@ -3,17 +3,18 @@ FROM python:3.12
 
 # set working directory
 WORKDIR /app
-
-# need requirements
-COPY requirements.txt .
+# copy application code
+COPY ../common/requirements.txt .
 
 RUN pip install --upgrade pip
 
 # install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY ../common/ ./common/
+
 # copy application code
-COPY . .
+COPY ./web-api .
 
 # expose websocket port
 EXPOSE 65432

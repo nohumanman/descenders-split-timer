@@ -64,7 +64,17 @@ CREATE TABLE pending_items (
     REFERENCES players ("steam_id")
 );
 
+--CREATE TABLE foreign_trail_checkpoint(
+--    
+--)
 
+--CREATE TABLE foreign_trail(
+--
+--    "map_name" TEXT,
+--    "trail_name" TEXT,
+--    "splits_are_checkpoints" BOOLEAN,
+--
+--)
 
 
 CREATE VIEW final_times AS

@@ -110,18 +110,6 @@ class UnitySocket():
             bike_id=0
         )
 
-    async def log_line(self, line: str):
-        """ Log a line of text to the server log """
-        if self.info.steam_id == "":
-            return
-        # remove existing output_log if too large (over 1MB)
-        if os.path.exists(f"{script_path}/output_log/{self.info.steam_id}.txt"):
-            if os.path.getsize(f"{script_path}/output_log/{self.info.steam_id}.txt") > 1000000:
-                os.remove(f"{script_path}/output_log/{self.info.steam_id}.txt")
-        # save to output_log/{steam_id}.txt
-        with open(f"{script_path}/output_log/{self.info.steam_id}.txt", "a") as file:
-            file.write(line + "\n")
-
     async def send_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """
         leaderboard = str(self.convert_to_unity(self.get_speedrun_dot_com_leaderboard(trail_name)))
@@ -319,13 +307,13 @@ class UnitySocket():
         # get pending items
         pending_items = await self.dbms.get_pending_items(self.info.steam_id)
         for item in pending_items:
-            await self.send("UNLOCK_ITEM|" + item[0])
+            await self.send("UNLOCK_ITEM|" + item.item_id)
             await self.dbms.redeem_pending_item(
                 self.info.steam_id,
-                item[0]
+                item.item_id
             )
             await self.parent.discord_bot.send_message_to_channel(
-                f"Item redeemed by {self.info.steam_name}: {item[0]}",
+                f"Item redeemed by {self.info.steam_name}: {item.item_id}",
                 1197188279158718486
             )
 
@@ -375,6 +363,9 @@ class UnitySocket():
             if player in excluding:
                 continue
             await player.send(data)
+
+    async def log_line(self, data: str):
+        pass
 
     async def handle_data(self, data: str):
         """ Handle data sent from the descenders unity client """
@@ -496,7 +487,7 @@ class UnitySocket():
         if self.info.steam_id is not None:
             await self.send_all("SET_BIKE|" + self.info.bike_type + "|" + self.info.steam_id)
         # check static/trails to see if there's a csv file with the same name as world_name
-        for csv_map_name in os.listdir(f"{script_path}/static/trails"):
+        for csv_map_name in os.listdir(f"{script_path}/trails"):
             i = csv_map_name.find(".csv") # get the name of the map without the .csv (or .csv.2)
             if csv_map_name[0:i] == map_name:
                 await self.send("NON_MODKIT_TRAIL|" + csv_map_name)
