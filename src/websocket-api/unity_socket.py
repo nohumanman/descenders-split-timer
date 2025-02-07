@@ -8,6 +8,7 @@ import asyncio
 import aiosqlite
 import sqlite3
 import requests
+import json
 import srcomapi
 import hashlib
 import srcomapi.datatypes as dt
@@ -98,7 +99,6 @@ class UnitySocket():
         self.reader = reader
         self.writer = writer
         self.trails = {}
-        self.last_contact = time.time()
         self.sent_non_modkit_notif = False
         self.info: Player = Player(
             steam_name="", steam_id="",
@@ -361,34 +361,16 @@ class UnitySocket():
 
     async def handle_data(self, data: str):
         """ Handle data sent from the descenders unity client """
-        self.last_contact = time.time()
-        if data == "":
-            return
-        await self.log_line("FROM_SERVER: " + data)
-        data_list = data.split("|")
-        # check the hash
-        message = "|".join(data_list[:-1]) + "|" # the message is everything except the hash
-        message_hash = data_list[-1] # the hash is the second-to-last item in the list
-        # hash the message
-        our_message_hash = hashlib.sha256(message.encode('utf-8')).digest().hex()
-        # compare the hashes
-        if message_hash == our_message_hash:
-            await self.send("RECEIVED|" + message_hash)
-        else:
-            await self.log_line("FROM_SERVER: HASH FOR " + message + " DOES NOT MATCH!")
-
-        for operator, function in operations.items():
-            self.last_contact = time.time()
-            if data.startswith(operator):
-                try:
-                    await function(self, data_list)
-                except IndexError:
-                    # our client sent wrong data!
-                    logging.warning(
-                        "Client sent wrong data! Version %s steam_id %s",
-                        self.info.version,
-                        self.info.steam_id
-                    )
+        try:
+            # Parse the data
+            operation_data = json.loads(data)
+            operation = operation_data['operation']
+            operands = operation_data['operands']
+            print(f"Received operation: {operation} with operands: {operands}")
+            # Perform the operation
+            await operations[operation](self, operands)
+        except Exception as e:
+            print(f"Error: {e}")
 
     async def invalidate_all_trails(self, reason: str, exception = ""):
         """ Invalidate all trails for a player. """
