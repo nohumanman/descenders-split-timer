@@ -16,9 +16,6 @@ COPY ../common/ ./common/
 # copy application code
 COPY ./web-api .
 
-# expose websocket port
-EXPOSE 65432
-
 # expose webserver port
 EXPOSE 8082
 
