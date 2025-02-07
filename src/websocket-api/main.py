@@ -1,7 +1,7 @@
 import socket
 import asyncio
 import os
-from unity_socket_server import UnitySocketServer
+from websocket_server import WebSocketServer
 from common.dbms import DBMS
 
 # Constants for configuration
@@ -33,7 +33,7 @@ async def start():
         print("Failed to connet to database!")
         exit(1)
 
-    unity_socket_server = UnitySocketServer(IP, SOCKET, dbms)
+    unity_socket_server = WebSocketServer(IP, SOCKET, dbms)
     
     server = await asyncio.start_server(
         unity_socket_server.handle_client,
