@@ -61,7 +61,12 @@
               item-value="name"
             >
               <template v-slot:item.place="{ item }">
-                {{ item.place }}
+                <v-icon
+                  v-if="item.place == '1' || item.place == '2' || item.place == '3'"
+                  :color="item.place == '1' ? 'yellow' : item.place == '2' ? 'grey' : 'orange'">
+                  mdi-medal
+                </v-icon>
+                  {{ item.place }}
               </template>
               <template v-slot:item.name="{ item }">
                 {{ item.name }}
