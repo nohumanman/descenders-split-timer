@@ -76,60 +76,13 @@ CREATE TABLE pending_items (
 --
 --)
 
-
-CREATE VIEW final_times AS
-
--- First CTE: Rank rows by checkpoint_num for each player_time_id
-WITH RankedCheckpoints AS (
-    SELECT 
-        player_times.steam_id,                          -- Select the Steam ID of the player
-		player_times.trail_id,
-        checkpoint_times.player_time_id,               -- Select the player's time ID
-        checkpoint_times.checkpoint_num,               -- Select the checkpoint number
-        checkpoint_times.checkpoint_time,              -- Select the time taken for the checkpoint
-        ROW_NUMBER() OVER (                            -- Generate a row number for each player_time_id
-            PARTITION BY checkpoint_times.player_time_id -- Group rows by player_time_id
-            ORDER BY checkpoint_times.checkpoint_num DESC -- Rank rows by checkpoint_num in descending order
-        ) AS rn                                        -- Alias the row number as `rn`
-    FROM 
-        checkpoint_times
-    JOIN
-        player_times
-        ON player_times.player_time_id = checkpoint_times.player_time_id -- Join to get Steam ID
-),
-
--- Second CTE: Filter for the highest checkpoint_num (rn = 1) and rank rows by checkpoint_time for each steam_id
-RankedByTime AS (
-    SELECT 
-        steam_id,                                       -- The Steam ID of the player
-        player_time_id,                                 -- The player's time ID
-        checkpoint_num,                                 -- The largest checkpoint number
-        checkpoint_time,                                -- The time at the largest checkpoint
-		trail_id,
-        ROW_NUMBER() OVER (                            -- Generate a row number for each steam_id
-            PARTITION BY steam_id                      -- Group rows by steam_id
-            ORDER BY checkpoint_time ASC               -- Rank rows by the lowest checkpoint_time
-        ) AS rn_by_time                                -- Alias the row number as `rn_by_time`
-    FROM 
-        RankedCheckpoints
-    WHERE 
-        rn = 1                                         -- Keep only rows with the largest checkpoint_num per player_time_id
-)
-
--- Final Query: Select only the rows with the lowest checkpoint_time for each steam_id
-SELECT 
-    player_time_id,                                    -- The player's time ID
-    checkpoint_time AS final_time                                  -- The lowest checkpoint time for the steam_id
-FROM 
-    RankedByTime
-JOIN trails ON trails.trail_id = RankedByTime.trail_id
-WHERE 
-    rn_by_time = 1                                     -- Keep only rows with the lowest checkpoint_time for each steam_id
-ORDER BY 
-    checkpoint_time;                                          -- Order the results by Steam ID
-
-
-CREATE VIEW final_times_detailed AS
+CREATE VIEW all_Times AS
+ WITH maxcheckpoints AS (
+         SELECT checkpoint_times_1.player_time_id,
+            max(checkpoint_times_1.checkpoint_num) AS max_checkpoint
+           FROM checkpoint_times checkpoint_times_1
+          GROUP BY checkpoint_times_1.player_time_id
+        )
  SELECT player_times.player_time_id,
     player_times.steam_id,
     player_times.submission_timestamp,
@@ -139,9 +92,10 @@ CREATE VIEW final_times_detailed AS
     player_times.version,
     player_times.game_version,
     player_times.deleted,
-    final_times.final_time,
-    COALESCE(verifications.verified, FALSE) AS verified,
+    checkpoint_times.checkpoint_time AS final_time,
+    COALESCE(verifications.verified, false) AS verified,
     verifications.verifier_id
-   FROM final_times
-     JOIN player_times ON player_times.player_time_id = final_times.player_time_id
-     LEFT JOIN verifications ON verifications.player_time_id = player_times.player_time_id;
+   FROM checkpoint_times
+     JOIN maxcheckpoints ON checkpoint_times.player_time_id = maxcheckpoints.player_time_id AND checkpoint_times.checkpoint_num = maxcheckpoints.max_checkpoint
+     JOIN player_times ON player_times.player_time_id = checkpoint_times.player_time_id
+     LEFT JOIN verifications ON verifications.player_time_id = checkpoint_times.player_time_id;

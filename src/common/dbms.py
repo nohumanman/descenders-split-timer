@@ -67,8 +67,8 @@ class WebsiteUser(Base):
     discord_name = Column(String)
     authorised = Column(Boolean)
 
-class FinalTimesDetailed(Base):
-    __tablename__ = 'final_times_detailed'
+class AllTimes(Base):
+    __tablename__ = 'all_times'
     
     player_time_id = Column(Integer, primary_key=True)
     steam_id = Column(String, nullable=False)
