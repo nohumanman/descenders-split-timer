@@ -3,8 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
 import time
-import logging
-from dbms_models import (
+from common.dbms_models import (
     Player, PlayerTime, CheckpointTime, Trail,
     Verification, WebsiteUser, PendingItems, AllTimes
 )

@@ -36,13 +36,14 @@ class UnitySocketServer():
         """ Creates a client from their socket and address """        
         address = writer.get_extra_info('peername')
         player = UnitySocket(address, self, reader, writer)
+        print(f"Player {player} connected")
         self.players.append(player)
         await player.send("SUCCESS")
         try:
-            while True:
+            while player.alive:
                 # Read the data from the client
                 data = await asyncio.wait_for(
-                    reader.read(self.read_buffer_size),
+                    reader.readuntil(b'\n'),
                     timeout=self.timeout
                 )
                 # If no data is received, then the client has disconnected
@@ -59,12 +60,12 @@ class UnitySocketServer():
                 # Remove the newline character from the message
                 message = message.rstrip("\n")
                 # if the message is a heartbeat, then ignore it
-                if message == "HEARTBEAT":
+                if message == "HEARTBEAT|":
                     continue
                 asyncio.create_task(player.handle_data(message))
         except asyncio.TimeoutError:
             print(f"Player {player} timed out")
-        except DisconnectError as e:
+        except DisconnectError:
             print(f"Player {player} disconnected")
         finally:
             writer.close()

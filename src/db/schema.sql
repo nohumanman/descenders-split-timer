@@ -78,10 +78,10 @@ CREATE TABLE pending_items (
 
 CREATE VIEW all_Times AS
  WITH maxcheckpoints AS (
-         SELECT checkpoint_times_1.player_time_id,
-            max(checkpoint_times_1.checkpoint_num) AS max_checkpoint
+         SELECT DISTINCT ON (checkpoint_times_1.player_time_id) checkpoint_times_1.player_time_id,
+            checkpoint_times_1.checkpoint_num AS max_checkpoint
            FROM checkpoint_times checkpoint_times_1
-          GROUP BY checkpoint_times_1.player_time_id
+          ORDER BY checkpoint_times_1.player_time_id, checkpoint_times_1.checkpoint_num DESC
         )
  SELECT player_times.player_time_id,
     player_times.steam_id,

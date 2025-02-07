@@ -23,45 +23,45 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 
 operations = {
     "STEAM_ID":
-        lambda netPlayer, data: netPlayer.set_steam_id(str(data[1])),
+        lambda netPlayer, data: netPlayer.set_steam_id(str(data[0])),
     "STEAM_NAME":
-        lambda netPlayer, data: netPlayer.set_steam_name(data[1]),
+        lambda netPlayer, data: netPlayer.set_steam_name(data[0]),
     "WORLD_NAME":
-        lambda netPlayer, data: netPlayer.set_world_name(data[1]),
+        lambda netPlayer, data: netPlayer.set_world_name(data[0]),
     "BOUNDARY_ENTER":
-        lambda netPlayer, data: netPlayer.on_boundary_enter(data[1], data[2]),
+        lambda netPlayer, data: netPlayer.on_boundary_enter(data[0], data[1]),
     "BOUNDARY_EXIT":
-        lambda netPlayer, data: netPlayer.on_boundary_exit(data[1], data[2]),
+        lambda netPlayer, data: netPlayer.on_boundary_exit(data[0], data[1]),
     "CHECKPOINT_ENTER":
         lambda netPlayer, data: netPlayer.on_checkpoint_enter(
+            data[0],
             data[1],
-            data[2],
-            int(data[3]),
-            float(data[4]),
-            data[5]
+            int(data[2]),
+            float(data[3]),
+            data[4]
         ),
     "RESPAWN":
         lambda netPlayer, data: netPlayer.on_respawn(),
     "MAP_ENTER":
-        lambda netPlayer, data: netPlayer.on_map_enter(data[1]),
+        lambda netPlayer, data: netPlayer.on_map_enter(data[0]),
     "MAP_EXIT":
         lambda netPlayer, data: netPlayer.on_map_exit(),
     "BIKE_SWITCH":
-        lambda netPlayer, data: netPlayer.on_bike_switch(data[1]),
+        lambda netPlayer, data: netPlayer.on_bike_switch(data[0]),
     "REP":
-        lambda netPlayer, data: netPlayer.set_reputation(data[1]),
+        lambda netPlayer, data: netPlayer.set_reputation(data[0]),
     "SPEEDRUN_DOT_COM_LEADERBOARD":
-        lambda netPlayer, data: netPlayer.send_leaderboard(data[1]),
+        lambda netPlayer, data: netPlayer.send_leaderboard(data[0]),
     "LEADERBOARD":
-        lambda netPlayer, data: netPlayer.send_speedrun_leaderboard(data[1]),
+        lambda netPlayer, data: netPlayer.send_speedrun_leaderboard(data[0]),
     "CHAT_MESSAGE":
-        lambda netPlayer, data: netPlayer.send_chat_message(data[1]),
+        lambda netPlayer, data: netPlayer.send_chat_message(data[0]),
     "START_SPEED":
-        lambda netPlayer, data: netPlayer.start_speed(float(data[1])),
+        lambda netPlayer, data: netPlayer.start_speed(float(data[0])),
     "TRICK":
-        lambda netPlayer, data: netPlayer.set_last_trick(str(data[1])),
+        lambda netPlayer, data: netPlayer.set_last_trick(str(data[0])),
     "VERSION":
-        lambda netPlayer, data: netPlayer.set_version(str(data[1])),
+        lambda netPlayer, data: netPlayer.set_version(str(data[0])),
     "LOG_LINE":
         lambda netPlayer, data: netPlayer.log_line(str(data[0:])),
 }
@@ -99,6 +99,7 @@ class UnitySocket():
         self.reader = reader
         self.writer = writer
         self.trails = {}
+        self.alive = True
         self.sent_non_modkit_notif = False
         self.info: Player = Player(
             steam_name="", steam_id="",
@@ -171,6 +172,8 @@ class UnitySocket():
             "%s '%s'\t- reputation is %s", self.info.steam_id,
             self.info.steam_name, reputation
         )
+        if reputation == "":
+            reputation = 0
         try:
             self.info.reputation = int(reputation)
         except ValueError:
@@ -328,18 +331,12 @@ class UnitySocket():
 
     async def send(self, data: str):
         """ Send data to the descenders unity client """
-        logging.info(
-            "%s '%s'\t- sending data '%s'", self.info.steam_id, self.info.steam_name, data
-        )
-        await self.log_line("SENDING FROM SERVER: " + data)
         try:
             self.writer.write((data + "\n").encode("utf-8"))
             await self.writer.drain()
         except (BrokenPipeError, ConnectionResetError):
-            logging.info(
-                "%s '%s'\t- connection closed '%s'", self.info.steam_id, self.info.steam_name, data
-            )
-            self.parent.delete_player(self)
+            print("Client disconnected")
+            self.alive = False
         except Exception as e:
             logging.info(
                 "%s '%s'\t- exception '%s'", self.info.steam_id, self.info.steam_name, e
@@ -363,11 +360,13 @@ class UnitySocket():
         """ Handle data sent from the descenders unity client """
         try:
             # Parse the data
-            operation_data = json.loads(data)
-            operation = operation_data['operation']
-            operands = operation_data['operands']
-            print(f"Received operation: {operation} with operands: {operands}")
+            operation_data = data.split("|")
+            operation = operation_data[0]
+            operands = operation_data[1:]
             # Perform the operation
+            if operation not in operations:
+                print(f"Operation {operation} not found")
+                return
             await operations[operation](self, operands)
         except Exception as e:
             print(f"Error: {e}")
