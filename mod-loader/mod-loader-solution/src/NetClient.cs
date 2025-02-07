@@ -254,6 +254,7 @@ namespace ModLoaderSolution
 				return;
 			Utilities.Log("Message Recieved: " + message);
 			if (message == "SUCCESS") {
+				SendData("UNITY_CLIENT");
 				NetStart();
 			}
 			if (message.StartsWith("ROTATE|"))

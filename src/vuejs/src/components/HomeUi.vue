@@ -113,13 +113,13 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="totalUsersOnline == 'ERROR'"
+            :loading="total_users_online == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
             <!-- Currently x users online, x times submitted in past 30 days -->
             <v-card-title>
-              {{  totalUsersOnline }}
+              {{  total_users_online }}
             </v-card-title>
             <v-card-subtitle>
               Users Online
@@ -128,13 +128,13 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="timesSubmittedPast30Days == 'ERROR'"
+            :loading="times_submitted_past_30_days == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
             <!-- Currently x users online, x times submitted in past 30 days -->
             <v-card-title>
-              {{ timesSubmittedPast30Days }} 
+              {{ times_submitted_past_30_days }} 
             </v-card-title>
             <v-card-subtitle>
               times in past 30 days
@@ -143,12 +143,12 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="totalStoredTimes == 'ERROR'"
+            :loading="total_stored_times == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
             <v-card-title>
-              {{ totalStoredTimes }}
+              {{ total_stored_times }}
             </v-card-title>
             <v-card-subtitle>
               total stored times
@@ -157,12 +157,12 @@
         </v-col>
         <v-col cols="12" md="3" sm="6" xs="12">
           <v-card
-            :loading="totalReplaySize == 'ERROR'"
+            :loading="total_replay_size == 'ERROR'"
             class="py-4"
             color="blue"
             href="">
             <v-card-title>
-              {{  totalReplaySize }}GB
+              {{  total_replay_size }}GB
             </v-card-title>
             <v-card-subtitle>
               of stored replays
@@ -199,53 +199,28 @@
 <script>
   const apiUrl = import.meta.env.VITE_APP_API_URL;
   import { ref } from 'vue'
+ 
+  export default {
+    name: 'App',
+    data() {
+      return {
+        total_replay_size: 'ERROR',
+        total_stored_times: 'ERROR',
+        total_users_online: 'ERROR',
+        times_submitted_past_30_days: 'ERROR'
+      }
+    },
+    mounted() {
+      this.$socket.on('data_update', (data) => {
+        // data is like {'total_users_online': 3}
+        for (const [key, value] of Object.entries(data)) {
+          this[key] = value;
+        }
+      })
+      this.$socket.emit('message', 'get_data');
+    }
+  }
 
-  var totalReplaySize = ref(0)
-  var totalStoredTimes = ref(0)
-  var totalUsersOnline = ref(0)
-  var timesSubmittedPast30Days = ref(0)
-  totalReplaySize.value = "ERROR";
-  totalStoredTimes.value = "ERROR";
-  totalUsersOnline.value = "ERROR";
-  timesSubmittedPast30Days.value = "ERROR";
-
-  fetch(`${apiUrl}/get-gb-stored-replays`)
-    .then(response => response.json())
-    .then(data => {
-      totalReplaySize.value = data;
-    })
-    .catch(error => {
-      totalReplaySize.value = "ERROR ";
-    });
-  
-  fetch(`${apiUrl}/get-total-stored-times`)
-    .then(response => response.json())
-    .then(data => {
-      // import as integer
-      totalStoredTimes.value = parseInt(data);
-      // add commas to the number
-      totalStoredTimes.value = totalStoredTimes.value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }).catch(error => {
-      totalStoredTimes.value = "ERROR";
-    });
-  
-  fetch(`${apiUrl}/get-total-users-online`)
-    .then(response => response.json())
-    .then(data => {
-      totalUsersOnline.value = data;
-    }).catch(error => {
-      totalUsersOnline.value = "ERROR";
-    });
-  
   var timestampThirtyDaysAgo = (new Date().getTime() - 30 * 24 * 60 * 60 * 1000) / 1000;
-  fetch(`${apiUrl}/get-total-stored-times?timestamp=` + timestampThirtyDaysAgo.toString())
-    
-    .then(response => response.json())
-    .then(data => {
-      timesSubmittedPast30Days.value = parseInt(data);
-      // add commas to the number
-      timesSubmittedPast30Days.value = timesSubmittedPast30Days.value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }).catch(error => {
-      timesSubmittedPast30Days.value = "ERROR";
-    });
+
 </script>
