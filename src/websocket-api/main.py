@@ -36,7 +36,7 @@ async def start():
     unity_socket_server = UnitySocketServer(IP, SOCKET, dbms)
     
     server = await asyncio.start_server(
-        unity_socket_server.create_client,
+        unity_socket_server.handle_client,
         unity_socket_server.host,
         unity_socket_server.port
     )

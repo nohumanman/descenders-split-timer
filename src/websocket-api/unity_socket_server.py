@@ -10,6 +10,8 @@ from common.dbms import DBMS
 class PlayerNotFound(Exception):
     """ Exception called when the descenders unity client could not be found """
 
+class DisconnectError(Exception):
+    """ Exception called when the descenders unity client disconnects """
 
 class UnitySocketServer():
     """ Used to communicate quickly with the Descenders Unity client. """
@@ -18,6 +20,7 @@ class UnitySocketServer():
         self.port = port
         self.dbms = dbms
         self.timeout = 120
+        self.read_buffer_size = 100
         self.website_socket_server = None
         self.players: list[UnitySocket] = []
 
@@ -29,80 +32,41 @@ class UnitySocketServer():
         player.writer.close()
         del player
 
-    async def delete_timed_out_players(self):
-        """ Deletes players that have timed out """
-        for player in self.players:
-            if (time.time() - player.last_contact) > self.timeout:
-                logging.info("%s '%s' - contact timeout disconnect",
-                             player.info.steam_id, player.info.steam_name)
-                self.delete_player(player)
-
-    def get_player_by_id(self, _id: str) -> UnitySocket:
-        """ Finds the player connected to the socket server from their id """
-        for player in self.players:
-            if player.info.steam_id == _id:
-                return player
-        raise PlayerNotFound("Cannot find player")
-
-    def get_player_by_name(self, name: str) -> UnitySocket:
-        """Used to find the player connected to the socket server from their name
-          Not to be used reliably, some names may be identical. """
-        for player in self.players:
-            if player.info.steam_name == name:
-                return player
-        raise PlayerNotFound("Cannot find player")
-
-    def get_player_by_addr(self, addr: tuple[str, int]) -> Union[UnitySocket, None]:
-        """ Finds the player connected to the socket server from their address """
-        for player in self.players:
-            if player.addr == addr:
-                return player
-        return None
-
-    async def riders_gate(self):
-        while True:
-            for player in self.players:
-                await player.send("RIDERSGATE|2")
-            time.sleep(10)
-
-    async def create_client(self, reader: StreamReader, writer: StreamWriter):
-        """ Creates a client from their socket and address """
-        print("create_client")
-        await self.delete_timed_out_players()
-        player = self.get_player_by_addr(writer.get_extra_info('peername'))
-        if player is None:
-            player = UnitySocket(writer.get_extra_info('peername'), self, reader, writer)
-            self.players.append(player)
-        logging.info("Created player")
+    async def handle_client(self, reader: StreamReader, writer: StreamWriter):
+        """ Creates a client from their socket and address """        
+        address = writer.get_extra_info('peername')
+        player = UnitySocket(address, self, reader, writer)
+        self.players.append(player)
         await player.send("SUCCESS")
-        message_buffer = ""
-        while True:
-            try:
-                data = await asyncio.wait_for(reader.readline(), timeout=20)
-            except (asyncio.TimeoutError, ConnectionResetError):
-                logging.info("%s '%s' - asyncio timeout",
-                             player.info.steam_id, player.info.steam_name)
-                self.delete_player(player)
-                return
-            if data == b'':
-                logging.info("%s '%s' - eof timeout", player.info.steam_id, player.info.steam_name)
-                self.delete_player(player)
-                return
-            message = message_buffer + data.decode()
-            if message[-1] != "\n":
-                # message not complete, wait for next message
-                message_buffer += message # store the message
-            else:
-                message_buffer = ""
-                if player is None:
-                    logging.error("Player is None")
-                    return
-                for mess in message.split("\n"):
-                    if (mess != "" and not(mess.startswith("LOG_LINE") and not(mess.startswith("pong")))):
-                        logging.info("%s '%s' - %s", player.info.steam_id, player.info.steam_name, mess)
-                    try:
-                        if mess == "pong":
-                            continue
-                        asyncio.create_task(player.handle_data(mess)) # asyncronously handle the data
-                    except Exception as e:
-                        logging.error(e)
+        try:
+            while True:
+                # Read the data from the client
+                data = await asyncio.wait_for(
+                    reader.read(self.read_buffer_size),
+                    timeout=self.timeout
+                )
+                # If no data is received, then the client has disconnected
+                if not data:
+                    raise DisconnectError("Client disconnected")
+                message = data.decode()
+                # If message does not end with a newline character, then read more data
+                while not message.endswith("\n"):
+                    data = await asyncio.wait_for(
+                        reader.read(self.read_buffer_size),
+                        timeout=self.timeout
+                    )
+                    message += data.decode()
+                # Remove the newline character from the message
+                message = message.rstrip("\n")
+                # if the message is a heartbeat, then ignore it
+                if message == "HEARTBEAT":
+                    continue
+                asyncio.create_task(player.handle_data(message))
+        except asyncio.TimeoutError:
+            print(f"Player {player} timed out")
+        except DisconnectError as e:
+            print(f"Player {player} disconnected")
+        finally:
+            writer.close()
+            await writer.wait_closed()
+            self.delete_player(player)

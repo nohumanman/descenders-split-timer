@@ -110,6 +110,9 @@ class UnitySocket():
             bike_id=0
         )
 
+    def __str__(self):
+        return f"{self.info.steam_name} {self.info.steam_id} on {self.addr}"
+
     async def send_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """
         leaderboard = str(await self.convert_to_unity(await self.get_speedrun_dot_com_leaderboard(trail_name)))
