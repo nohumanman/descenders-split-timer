@@ -4,6 +4,8 @@
         class="align-center mx-auto"
         :max-width="height"
       >
+      
+      
       <v-row>
         <v-col cols="12">
           <v-card class="mx-auto" max-width="1000" outlined raised>
@@ -12,6 +14,29 @@
             </v-card-title>
           </v-card>
         </v-col>
+      </v-row>
+      <v-row>
+        <v-navigation-drawer width="400">
+        <v-list-item title="Worlds"></v-list-item>
+        <v-divider></v-divider>
+        <v-list-item>
+          <v-text-field
+            v-model="worldSearch"
+            prepend-icon="mdi-magnify"
+            hide-details
+            single-line
+          ></v-text-field>
+        </v-list-item>
+        <v-list-item 
+          v-for="world in searchedWorlds" 
+          :key="world" 
+          link 
+          @click="selectWorld(world)" 
+          :class="{ 'v-list-item--active': selectedWorld === world }"
+        >
+          {{ world }}
+        </v-list-item>
+      </v-navigation-drawer>
       </v-row>
       <v-row>
         <v-col v-for="trail in c_trails" cols="12" sm="12" md="12" lg="6">
@@ -28,6 +53,7 @@
               {{  trail.world_name }}
             </v-card-subtitle>
             <v-data-table-virtual
+              :loading="!trail.leaderboard"
               disable-sort
               :headers="headers"
               :items="trail.leaderboard"
@@ -62,6 +88,7 @@
 const apiUrl = import.meta.env.VITE_APP_API_URL;
 export default {
   name: 'Leaderboard',
+  
   data () {
     return {
       // fetch localhost:8082/get-trails
@@ -72,11 +99,26 @@ export default {
           { title: 'Time', align: 'center', key: 'time' },
           { title: '', align: 'end', key: 'time_id' },
         ],
+      selectedWorld: 'Igloo Bike Park',
+      worldSearch: '',
     };
   },
   computed: {
     c_trails: function () {
-      return this.trails.filter(i => i.leaderboard != null && i.leaderboard.length !== 0)
+      return this.trails.filter(i => i.world_name == this.selectedWorld)
+    },
+    searchedWorlds: function(){
+      return this.worlds.filter(i => i.toLowerCase().includes(this.worldSearch.toLowerCase()))
+    },
+    worlds: function () {
+      var wrlds = [];
+      for (let i = 0; i < this.trails.length; i++) {
+        if (!wrlds.includes(this.trails[i].world_name)) {
+          wrlds.push(this.trails[i].world_name);
+        }
+      }
+      console.log(wrlds);
+      return wrlds;
     },
   },
   methods: {
@@ -85,6 +127,16 @@ export default {
       const response = await fetch(`${apiUrl}/get-leaderboard?trail_name=${trail.trail_name}&world_name=${trail.world_name}`);
       const data = await response.json();
       return data;
+    },
+    async selectWorld(world) {
+      console.log(world);
+      this.selectedWorld = world;
+      // add leaderboard to each trail
+      for (let i = 0; i < this.trails.length; i++) {
+        if (this.trails[i].world_name == world) {
+          this.trails[i].leaderboard = await this.getLeaderboard(this.trails[i]);
+        }
+      }
     },
     secs_to_str(secs){
             secs = parseFloat(secs);
@@ -109,15 +161,6 @@ export default {
       .then(response => response.json())
       .then(async data => {
         this.trails = data["trails"];
-        const promises = this.trails.map(trail => {
-          return this.getLeaderboard(trail).then(leaderboard => {
-            trail.leaderboard = leaderboard;
-          });
-        });
-
-        // Continue with other code without waiting for the results
-        await Promise.all(promises);
-
       })
     }
   };

@@ -2,7 +2,8 @@ CREATE TABLE trails (
     "trail_id" SERIAL PRIMARY KEY,
     "world_name" TEXT,
     "trail_name" TEXT,
-    UNIQUE("world_name", "trail_name")
+    "version" TEXT,
+    UNIQUE("world_name", "trail_name", "version")
 );
 
 CREATE TABLE bike_types (
@@ -17,13 +18,15 @@ CREATE TABLE player_times (
     "player_time_id" BIGINT, -- Unique ID for each time
     "steam_id" TEXT, -- Steam ID of the player
     "submission_timestamp" FLOAT, -- Time the time was submitted
-    "trail_id" INTEGER,
+    "trail_id" INTEGER NOT NULL, -- ID of the trail the time was set on
     "bike_id" INTEGER,
     "starting_speed" FLOAT, -- Speed the player started at
     "version" TEXT, -- modkit version used
     "game_version" TEXT, -- game version used
     "deleted" BOOLEAN, -- If the time has been deleted
-    PRIMARY KEY ("player_time_id") -- Primary key is the time ID
+    PRIMARY KEY ("player_time_id"), -- Primary key is the time ID
+    FOREIGN KEY ("trail_id")
+    REFERENCES trails ("trail_id")
 );
 
 CREATE TABLE verifications (

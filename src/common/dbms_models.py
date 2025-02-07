@@ -44,6 +44,7 @@ class Trail(Base):
     trail_id = Column(Integer, primary_key=True)
     trail_name = Column(String)
     world_name = Column(String)
+    version = Column(String)
 
 class Verification(Base):
     __tablename__ = 'verifications'

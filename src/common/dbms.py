@@ -134,10 +134,21 @@ class DBMS:
             )
             return len(result.scalars().all())
 
-    async def get_trails(self) -> list[Trail]:
+    async def get_trails(self, only_populated = True) -> list[Trail]:
         async with self.async_session() as session:
-            result = await session.execute(select(Trail))
-            trails = result.scalars().all()
+            query = select(Trail.trail_name, Trail.world_name)
+            if only_populated:
+                from sqlalchemy import and_
+                query = (query.join(
+                        AllTimes,
+                        Trail.trail_id == AllTimes.trail_id
+                    )
+                    .where(and_(AllTimes.deleted.is_(False), AllTimes.verified))
+                    .group_by(Trail.trail_name, Trail.world_name)
+                )
+            print(query)
+            result = await session.execute(query)
+            trails = result.all()
             return [
                 {
                     "trail_name": trail.trail_name,
@@ -173,6 +184,7 @@ class DBMS:
                         and Trail.world_name == world_name
                     )
                 )
+            print(query)
             query = query.order_by(AllTimes.final_time)
             # if we want to limit then limit
             if num:
@@ -183,17 +195,17 @@ class DBMS:
             return [
                 {
                     "place": i + 1,
-                    "starting_speed": final_times_detailed.starting_speed,
-                    "name": (await self.get_player(final_times_detailed.steam_id)),
-                    "bike": final_times_detailed.bike_id,
-                    "version": final_times_detailed.version,
-                    "verified":final_times_detailed.verified,
-                    "deleted":final_times_detailed.deleted,
-                    "time_id": final_times_detailed.player_time_id,
-                    "time": final_times_detailed.final_time,
-                    "submission_timestamp": final_times_detailed.submission_timestamp
+                    "starting_speed": all_times.starting_speed,
+                    "name": (await self.get_player(all_times.steam_id)),
+                    "bike": all_times.bike_id,
+                    "version": all_times.version,
+                    "verified":all_times.verified,
+                    "deleted":all_times.deleted,
+                    "time_id": all_times.player_time_id,
+                    "time": all_times.final_time,
+                    "submission_timestamp": all_times.submission_timestamp
                 }
-                for i, final_times_detailed in enumerate(times)
+                for i, all_times in enumerate(times)
             ]
     
     async def delete_time(self, time_id):
@@ -281,17 +293,17 @@ class DBMS:
             times = result.scalars().all()
             return [
                 {
-                    "starting_speed": final_times_detailed.starting_speed,
-                    "name": await self.get_player(final_times_detailed.steam_id),
-                    "bike": final_times_detailed.bike_id,
-                    "version": final_times_detailed.version,
-                    "verified":final_times_detailed.verified,
-                    "deleted":final_times_detailed.deleted,
-                    "time_id": str(final_times_detailed.player_time_id),
-                    "time": final_times_detailed.final_time,
-                    "submission_timestamp": final_times_detailed.submission_timestamp
+                    "starting_speed": all_times.starting_speed,
+                    "name": await self.get_player(all_times.steam_id),
+                    "bike": all_times.bike_id,
+                    "version": all_times.version,
+                    "verified":all_times.verified,
+                    "deleted":all_times.deleted,
+                    "time_id": str(all_times.player_time_id),
+                    "time": all_times.final_time,
+                    "submission_timestamp": all_times.submission_timestamp
                 }
-                for final_times_detailed in times
+                for all_times in times
             ]
 
     async def get_trail_average_starting_speed(self, trail_name, world_name):

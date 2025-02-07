@@ -89,6 +89,8 @@ class Webserver():
 
     async def get_gb_stored_replays(self):
         """Get the file size of replays in GB """
+        if not os.path.exists("replays"):
+            return "0.0"
         return str(round(sum(
             os.path.getsize(f"replays/{f}")
             for f in os.listdir("replays")

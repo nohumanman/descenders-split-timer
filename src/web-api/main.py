@@ -23,6 +23,11 @@ webserver = Webserver(dbms)
 webserver_app = webserver.webserver_app
 
 def run_server_in_thread():
+    # if no event loop, create one
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
     threading.Thread(target=asyncio.get_event_loop().run_forever).start()
     print(f"Server available from http://localhost:{WEBSITE_PORT}/")
     webserver.webserver_app.run(
