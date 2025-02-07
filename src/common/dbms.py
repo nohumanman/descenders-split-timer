@@ -211,8 +211,8 @@ class DBMS:
     async def get_total_stored_times(self, timestamp: int = 0) -> int:
         async with self.async_session() as session:
             result = await session.execute(
-                select(FinalTimesDetailed)
-                .where(FinalTimesDetailed.submission_timestamp > timestamp)
+                select(AllTimes)
+                .where(AllTimes.submission_timestamp > timestamp)
             )
             return len(result.scalars().all())
 
@@ -236,13 +236,13 @@ class DBMS:
             verified=True
         ) -> list[dict]:
         async with self.async_session() as session:
-            query = select(FinalTimesDetailed).filter_by(deleted=False, verified=verified)
+            query = select(AllTimes).filter_by(deleted=False, verified=verified)
             if trail_name is not None and world_name is not None:
-                query = query.join(Trail, Trail.trail_id == FinalTimesDetailed.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
+                query = query.join(Trail, Trail.trail_id == AllTimes.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
             if num:
-                query = query.order_by(FinalTimesDetailed.final_time).limit(num)
+                query = query.order_by(AllTimes.final_time).limit(num)
             else:
-                query = query.order_by(FinalTimesDetailed.final_time)
+                query = query.order_by(AllTimes.final_time)
             result = await session.execute(query)
             times = result.scalars().all()
 
@@ -326,20 +326,20 @@ class DBMS:
 
     async def get_recent_times(self, page=1, itemsPerPage=10, sortBy="submission_timestamp", sortDesc=False):
         async with self.async_session() as session:
-            query = select(FinalTimesDetailed)
+            query = select(AllTimes)
             # TODO: This should be a dictionary
             if sortBy == "submission_timestamp":
-                query = query.order_by(FinalTimesDetailed.submission_timestamp.desc() if sortDesc else FinalTimesDetailed.submission_timestamp)
+                query = query.order_by(AllTimes.submission_timestamp.desc() if sortDesc else AllTimes.submission_timestamp)
             elif sortBy == "time":
-                query = query.order_by(FinalTimesDetailed.final_time.desc() if sortDesc else FinalTimesDetailed.final_time)
+                query = query.order_by(AllTimes.final_time.desc() if sortDesc else AllTimes.final_time)
             elif sortBy == "starting_speed":
-                query = query.order_by(FinalTimesDetailed.starting_speed.desc() if sortDesc else FinalTimesDetailed.starting_speed)
+                query = query.order_by(AllTimes.starting_speed.desc() if sortDesc else AllTimes.starting_speed)
             elif sortBy == "name":
-                query = query.order_by(FinalTimesDetailed.steam_id.desc() if sortDesc else FinalTimesDetailed.steam_id)
+                query = query.order_by(AllTimes.steam_id.desc() if sortDesc else AllTimes.steam_id)
             elif sortBy == "bike":
-                query = query.order_by(FinalTimesDetailed.bike_id.desc() if sortDesc else FinalTimesDetailed.bike_id)
+                query = query.order_by(AllTimes.bike_id.desc() if sortDesc else AllTimes.bike_id)
             elif sortBy == "version":
-                query = query.order_by(FinalTimesDetailed.version.desc() if sortDesc else FinalTimesDetailed.version)
+                query = query.order_by(AllTimes.version.desc() if sortDesc else AllTimes.version)
 
             if itemsPerPage != -1 and page and itemsPerPage:
                 query = query.limit(itemsPerPage).offset((page - 1) * itemsPerPage)
