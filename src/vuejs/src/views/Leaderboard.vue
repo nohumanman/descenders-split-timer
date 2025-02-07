@@ -50,7 +50,7 @@
               {{ trail.trail_name }}
             </v-card-title>
             <v-card-subtitle class=text-center>
-              {{  trail.world_name }}
+              {{  trail.world_name }} <v-btn icon="mdi-refresh" @click="refreshLeaderboard(trail)"></v-btn>
             </v-card-subtitle>
             <v-data-table-virtual
               :loading="!trail.leaderboard"
@@ -88,7 +88,6 @@
 const apiUrl = import.meta.env.VITE_APP_API_URL;
 export default {
   name: 'Leaderboard',
-  
   data () {
     return {
       // fetch localhost:8082/get-trails
@@ -99,7 +98,7 @@ export default {
           { title: 'Time', align: 'center', key: 'time' },
           { title: '', align: 'end', key: 'time_id' },
         ],
-      selectedWorld: 'Igloo Bike Park',
+      selectedWorld: '',
       worldSearch: '',
     };
   },
@@ -138,6 +137,16 @@ export default {
         }
       }
     },
+    refreshLeaderboard(trail){
+      for (let i = 0; i < this.trails.length; i++) {
+        if (this.trails[i].world_name == trail.world_name && this.trails[i].trail_name == trail.trail_name) {
+          this.trails[i].leaderboard = null;
+          this.getLeaderboard(this.trails[i]).then(data => {
+            this.trails[i].leaderboard = data;
+          });
+        }
+      }
+    },
     secs_to_str(secs){
             secs = parseFloat(secs);
             var d_mins = Math.floor(secs / 60);
@@ -164,8 +173,6 @@ export default {
       })
     }
   };
-
-
 </script>
 
 <script setup>
