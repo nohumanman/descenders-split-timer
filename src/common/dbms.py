@@ -236,9 +236,26 @@ class DBMS:
             verified=True
         ) -> list[dict]:
         async with self.async_session() as session:
-            query = select(AllTimes).filter_by(deleted=False, verified=verified)
+            query = (
+                select(AllTimes)  # Select all columns from the AllTimes model
+                .distinct(AllTimes.trail_id, AllTimes.steam_id)  # group by (trail_id, steam_id)
+                .filter_by(deleted=False, verified=verified) # don't include deleted times
+                .order_by(  # required for DISTINCT ON to work correctly
+                    AllTimes.trail_id,  # Order by trail_id first
+                    AllTimes.steam_id,  # Then order by steam_id
+                    AllTimes.final_time  # Finally, order by final_time to select the smallest final_time for each trail_id, steam_id pair
+                )
+            )
+            # if we have a trail name then discriminate to that trail
             if trail_name is not None and world_name is not None:
-                query = query.join(Trail, Trail.trail_id == AllTimes.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
+                query = (query
+                    .join(Trail, Trail.trail_id == AllTimes.trail_id)
+                    .filter(
+                        Trail.trail_name == trail_name
+                        and Trail.world_name == world_name
+                    )
+                )
+            # if we want to limit then limit
             if num:
                 query = query.order_by(AllTimes.final_time).limit(num)
             else:
