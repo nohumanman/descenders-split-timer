@@ -4,6 +4,7 @@ from websocket import WebSocket
 import time
 import socketio
 from aiohttp import web
+import json
 
 class VuejsSocketServer:
     def __init__(self, dbms: DBMS, web_socket: WebSocket, host='localhost', port=40000):
@@ -43,9 +44,21 @@ class VuejsSocketServer:
                 "bike_type": player.info.bike_type,
                 "world_name": player.info.world_name,
                 "last_trick": player.info.last_trick,
-                "time_started": player.info.time_started
+                "time_started": player.info.time_started,
+                "trails": str([{player.trails[trail].trail_name} for trail in player.trails])
             } for player in self.web_socket.players]
             await self.sio.emit('users_update', users, room=sid)
+        try:
+            if type(data) == str:
+                data = json.loads(data)
+            if data['type'] == 'eval':
+                steam_id = data['data']['steam_id']
+                # This is a security risk, but it's just for testing
+                for player in self.web_socket.players:
+                    if player.info.steam_id == steam_id:
+                        await player.send(data['data']['eval'])
+        except json.JSONDecodeError:
+            return
 
     def run(self):
         web.run_app(self.app, host=self.host, port=self.port)
