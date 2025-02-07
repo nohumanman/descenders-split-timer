@@ -59,7 +59,6 @@ namespace ModLoaderSolution
                         { "CameraProps", typeof(CameraModifier) },
                         { "JsonRidersGate", typeof(RidersGate) },
                         { "ThreeDTimerJson", typeof(ThreeDTimer) },
-                        { "MedalSystemInfo", typeof(MedalSystem) },
                         { "SlipModInfo", typeof(SlipModifier) }
                     };
                     // use dict to populate our scripts

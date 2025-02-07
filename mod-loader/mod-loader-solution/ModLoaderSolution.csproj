@@ -83,7 +83,6 @@
     <Compile Include="src\Timer\Boundary.cs" />
     <Compile Include="src\Timer\Checkpoint.cs" />
     <Compile Include="src\Timer\LeaderboardInfo.cs" />
-    <Compile Include="src\Timer\MedalSystem.cs" />
     <Compile Include="src\Timer\SplitTimerText.cs" />
     <Compile Include="src\Timer\ThreeDTimer.cs" />
     <Compile Include="src\Timer\Trail.cs" />
