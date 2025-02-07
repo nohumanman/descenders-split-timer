@@ -270,31 +270,11 @@ class TrailTimer():
             await self.network_player.send(
                 f"TIMER_FINISH|{secs_str}\\n{can_end[1]}\\nLive Racers: This time is still logged!\\n"
             )
-
-        async def discord_notif():
-            # send the time to the discord server if it is a new fastest time
-            global_fastest = await self.network_player.dbms.get_global_best_checkpoint_times(
-                self.trail_name,
-                self.network_player.info.world_name
-            )
-            if global_fastest is not None and client_time < global_fastest[len(global_fastest)-1] and self.timer_info.auto_verify and can_end[0]:
-                await self.__new_fastest_time(secs_str)
-            # send the time to the discord server if it is a new fastest time
-            our_fastest = await self.network_player.dbms.get_personal_best_checkpoint_times(
-                self.trail_name,
-                self.network_player.info.steam_id,
-                self.network_player.info.world_name
-            )
-            if our_fastest is None or len(our_fastest) == 0:
-                fastest_pb = -1
-            else:
-                fastest_pb = float(our_fastest[len(our_fastest)-1])
         
         # update the leaderboards and medals on connected clients
         async def update():
             await self.update_leaderboards()
         asyncio.create_task(update())
-        await discord_notif()
         self.timer_info.auto_verify = True
 
     async def potential_cheat(self, client_time: float):
@@ -304,17 +284,6 @@ class TrailTimer():
             self.network_player.info.steam_name, client_time
         )
         await self.invalidate_timer("Client time did not match server time!")
-        discord_bot = self.network_player.parent.discord_bot
-        if discord_bot is not None:
-            discord_bot.loop.run_until_complete(
-                discord_bot.ban_note(
-                    "**Potential cheat** from "
-                    f"{self.network_player.info.steam_name}"
-                    " - client time did not match server time!"
-                    f"\n\nTime submitted was '{client_time}' and "
-                    f"server time was '{(time.time() - self.timer_info.time_started)}'"
-                )
-            )
 
     async def update_leaderboards(self):
         """ Update the leaderboards for the trail. """
@@ -326,23 +295,6 @@ class TrailTimer():
                     await self.network_player.get_leaderboard(self.trail_name)
                 )
             )
-
-    async def __new_fastest_time(self, our_time: str):
-        """ Called when a new fastest time is set. """
-        logging.info(
-            "%s '%s'\t- new fastest time!", self.network_player.info.steam_id,
-            self.network_player.info.steam_name
-        )
-        discord_bot = self.network_player.parent.discord_bot
-        if discord_bot is not None:
-            await discord_bot.new_fastest_time(
-                    "🎉 New fastest time on **"
-                    + self.trail_name
-                    + "** by **"
-                    + self.network_player.info.steam_name
-                    + "**! 🎉\nTime to beat is: "
-                    + our_time
-                )
 
     @staticmethod
     def secs_to_str(secs):

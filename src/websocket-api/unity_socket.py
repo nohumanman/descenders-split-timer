@@ -305,10 +305,6 @@ class UnitySocket():
                 self.info.steam_id,
                 item.item_id
             )
-            await self.parent.discord_bot.send_message_to_channel(
-                f"Item redeemed by {self.info.steam_name}: {item.item_id}",
-                1197188279158718486
-            )
 
     async def get_default_bike(self):
         """ Get the async default bike for a player. """

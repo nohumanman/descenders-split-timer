@@ -1,5 +1,4 @@
 """ Used to host the socket server. """
-from typing import TYPE_CHECKING
 from typing import Union
 import time
 import asyncio
@@ -8,29 +7,19 @@ import logging
 from unity_socket import UnitySocket
 from common.dbms import DBMS
 
-if TYPE_CHECKING: # for imports with intellisense
-    from common.discord_bot import DiscordBot
-
 class PlayerNotFound(Exception):
     """ Exception called when the descenders unity client could not be found """
 
 
 class UnitySocketServer():
     """ Used to communicate quickly with the Descenders Unity client. """
-    def __init__(self, ip: str, port: int, dbms: DBMS, discord_bot):
+    def __init__(self, ip: str, port: int, dbms: DBMS):
         self.host = ip
         self.port = port
         self.dbms = dbms
         self.timeout = 120
-        self.discord_bot : DiscordBot | None = discord_bot
         self.website_socket_server = None
         self.players: list[UnitySocket] = []
-
-    def get_discord_bot(self) -> 'DiscordBot':
-        """ Returns the discord bot """
-        if self.discord_bot is None:
-            raise RuntimeError("Discord bot not set")
-        return self.discord_bot
 
     def delete_player(self, player: UnitySocket):
         """ Deletes the player from the socket server """
@@ -113,7 +102,6 @@ class UnitySocketServer():
                         logging.info("%s '%s' - %s", player.info.steam_id, player.info.steam_name, mess)
                     try:
                         if mess == "pong":
-                            self.last_contact = time.time()
                             continue
                         asyncio.create_task(player.handle_data(mess)) # asyncronously handle the data
                     except Exception as e:

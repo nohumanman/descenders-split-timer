@@ -20,10 +20,5 @@ COPY ./websocket-api .
 # expose websocket port
 EXPOSE 65432
 
-# expose webserver port
-EXPOSE 8082
-
-RUN ls -l /app/requirements.txt
-
 # run application
-CMD ["python3", "main.py"]
+CMD ["python3", "-u", "main.py"]
