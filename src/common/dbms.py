@@ -243,7 +243,7 @@ class DBMS:
                 .order_by(  # required for DISTINCT ON to work correctly
                     AllTimes.trail_id,  # Order by trail_id first
                     AllTimes.steam_id,  # Then order by steam_id
-                    AllTimes.final_time  # Finally, order by final_time to select the smallest final_time for each trail_id, steam_id pair
+                    AllTimes.final_time  # order by final_time for smallest final_time
                 )
             )
             # if we have a trail name then discriminate to that trail
@@ -255,11 +255,10 @@ class DBMS:
                         and Trail.world_name == world_name
                     )
                 )
+            query = query.order_by(AllTimes.final_time)
             # if we want to limit then limit
             if num:
-                query = query.order_by(AllTimes.final_time).limit(num)
-            else:
-                query = query.order_by(AllTimes.final_time)
+                query = query.limit(num)
             result = await session.execute(query)
             times = result.scalars().all()
 
