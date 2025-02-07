@@ -7,7 +7,7 @@ import sqlite3
 import psycopg2
 
 # connect to sqlite
-conn = sqlite3.connect('server/src/database-schema/modkit.db')
+conn = sqlite3.connect('src/db/modkit.db')
 cursor = conn.cursor()
 
 # get all players
@@ -20,7 +20,7 @@ psycopg2_conn = psycopg2.connect("postgresql://postgres:postgres@localhost/postg
 psycopg2_cursor = psycopg2_conn.cursor()
 
 psycopg2_cursor.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") # TODO: DELETEME
-with open("server/src/database-schema/schema.sql", "r") as f:
+with open("src/db/schema.sql", "r") as f:
     psycopg2_cursor.execute(f.read())
 
 # insert into players
@@ -40,10 +40,12 @@ trails = [[time[3], time[4]] for time in times]
 # insert into trails
 trails_encountered = []
 for trail in trails:
+    if "-" not in trail[0]:
+        trail[0] += "-"
     if trail in trails_encountered:
         continue
     psycopg2_cursor.execute(
-        "INSERT INTO trails (world_name, trail_name) VALUES (%s, %s)", (trail[0], trail[1])
+        "INSERT INTO trails (world_name, trail_name, version) VALUES (%s, %s, %s)", (trail[0].split("-")[0], trail[1], trail[0].split("-")[1])
     )
     trails_encountered.append(trail)
 
@@ -59,6 +61,10 @@ for time in times:
     time_id = int(time[1])
     timestamp = time[2]
     world_name = time[3]
+    if "-" not in world_name:
+        world_name += "-"
+    world_version = world_name.split("-")[1]
+    world_name = world_name.split("-")[0]
     trail_name = time[4]
     bike_type = 0 if time[5] == "enduro" else 1 if time[5] == "downhill" else 2
     starting_speed = time[6]
@@ -75,27 +81,10 @@ for time in times:
                 trail_id, bike_id, starting_speed,
                 version, game_version, deleted
             ) VALUES (
-            %s, %s, %s, (SELECT trails.trail_id FROM trails WHERE trails.trail_name = %s AND trails.world_name = %s), %s, %s, %s, 0, %s) 
+            %s, %s, %s, (SELECT trails.trail_id FROM trails WHERE trails.trail_name = %s AND trails.world_name = %s AND trails.version = %s), %s, %s, %s, 0, %s) 
         ''',
-        (steam_id, time_id, timestamp, trail_name, world_name, bike_type, starting_speed, version, deleted)
+        (steam_id, time_id, timestamp, trail_name, world_name, world_version, bike_type, starting_speed, version, deleted)
     )
-
-psycopg2_conn.commit()
-# insert split times into checkpoints
-print("inserting split times")
-cursor.execute("SELECT * FROM SplitTime")
-split_times = cursor.fetchall()
-for split_time in split_times:
-    # start transaction
-    try:
-        psycopg2_cursor.execute(
-            "INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (%s, %s, %s)",
-            (int(split_time[0]), int(split_time[1]), split_time[2])
-        )
-    except Exception as e:
-        print(e)
-        print(split_time)
-    psycopg2_conn.commit()
 
 psycopg2_conn.commit()
 
@@ -116,6 +105,24 @@ for time in times:
             (time_id, verified)
         )
         psycopg2_conn.commit()
+
+# insert split times into checkpoints
+print("inserting split times")
+cursor.execute("SELECT * FROM SplitTime")
+split_times = cursor.fetchall()
+for split_time in split_times:
+    # start transaction
+    try:
+        psycopg2_cursor.execute(
+            "INSERT INTO checkpoint_times (player_time_id, checkpoint_num, checkpoint_time) VALUES (%s, %s, %s)",
+            (int(split_time[0]), int(split_time[1]), split_time[2])
+        )
+    except Exception as e:
+        print(e)
+        print(split_time)
+    psycopg2_conn.commit()
+
+psycopg2_conn.commit()
 
 # PendingItem
 print("inserting pending items")

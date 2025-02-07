@@ -1,9 +1,11 @@
 <template>
   <v-app>
     
-    <TopNavigation />
+    <!-- Footer -->
+    <AppFooter />
     <!-- App Bar -->
-   
+    <TopNavigation />
+    
 
     <!-- Main Content -->
     <v-main>
@@ -11,8 +13,8 @@
       <router-view />
     </v-main>
 
-    <!-- Footer -->
-    <AppFooter />
+    
+
   </v-app>
 </template>
 

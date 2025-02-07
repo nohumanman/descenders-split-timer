@@ -242,12 +242,11 @@ namespace ModLoaderSolution
         {
 			Utilities.LogMethodCallStart();
 			PlayerManagement.Instance.NetStart();
-			foreach (MedalSystem medalSystem in FindObjectsOfType<MedalSystem>())
-				medalSystem.NetStart();
 			this.SendData("REP", Utilities.instance.GetPlayerTotalRep());
 			foreach (Boundary b in FindObjectsOfType<Boundary>())
 				b.ForceUpdate(); // force tell the server what boundaries we are in.
-			Utilities.LogMethodCallEnd();
+            Timer timer = new Timer(SendHeartbeat, null, 0, 5000);  // Sends heartbeat every 5 seconds
+            Utilities.LogMethodCallEnd();
 		}
 		private void MessageRecieved(string message) {
 			Utilities.LogMethodCallStart();
@@ -257,11 +256,6 @@ namespace ModLoaderSolution
 			if (message == "SUCCESS") {
 				NetStart();
 			}
-            if (message.StartsWith("RECEIVED"))
-            {
-                // not waiting for a response anymore
-                hashesAwaiting.Remove(message.Split('|')[1]);
-            }
 			if (message.StartsWith("ROTATE|"))
             {
 				string rotate = message.Split('|')[1];
@@ -297,32 +291,6 @@ namespace ModLoaderSolution
 			}
 			if (message.StartsWith("SET_TEXT_COL_DEFAULT"))
 				SplitTimerText.Instance.TextColToDefault();
-			if (message.StartsWith("SET_MEDAL"))
-            {
-				string trailName = message.Split('|')[1];
-				foreach(MedalSystem medalSystem in FindObjectsOfType<MedalSystem>())
-                {
-					if (medalSystem.trailName == trailName)
-                    {
-						bool rainbowGot = message.Split('|')[2] == "True";
-						bool goldGot = message.Split('|')[3] == "True";
-						bool silverGot = message.Split('|')[4] == "True";
-						bool bronzeGot = message.Split('|')[5] == "True";
-
-						medalSystem.rainbowMedalGot.SetActive(rainbowGot);
-						medalSystem.rainbowMedalNotGot.SetActive(!rainbowGot);
-
-						medalSystem.goldMedalGot.SetActive(goldGot);
-						medalSystem.goldMedalNotGot.SetActive(!goldGot);
-
-						medalSystem.silverMedalGot.SetActive(silverGot);
-						medalSystem.silverMedalNotGot.SetActive(!silverGot);
-
-						medalSystem.bronzeMedalGot.SetActive(bronzeGot);
-						medalSystem.bronzeMedalNotGot.SetActive(!bronzeGot);
-					}
-                }
-            }
 			if (message == "PRIVATE_LOBBY")
             {
 				//Utilities.instance.GoToPrivateLobby();
@@ -547,13 +515,11 @@ namespace ModLoaderSolution
 				string code = message.Split('|')[1];
 				DevCommandsGameplay.LockItem(int.Parse(code));
 			}
-			_SendData("pong", "");
 			Utilities.LogMethodCallEnd();
 		}
-		IEnumerator SendDataDelayed(string clientMessage, float time)
+        void SendHeartbeat(object state)
         {
-			yield return new WaitForSeconds(time);
-			SendData(clientMessage);
+            SendData("HEARTBEAT");
         }
 		public string clean(string mess)
         {
@@ -564,54 +530,16 @@ namespace ModLoaderSolution
 			}
 			return mess;
 		}
-        static string ComputeSha256Hash(string rawData)
-        {
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
-        public List<string> hashesAwaiting = new List<string>();
-        IEnumerator WaitForHash(string hashToWaitFor, string message)
-        {
-            yield return new WaitForSeconds(10f);
-            if (hashesAwaiting.Contains(hashToWaitFor))
-            {
-                _SendData(message, hashToWaitFor); // we failed, so we will try again.
-                hashesAwaiting.Remove(hashToWaitFor); // and forget about it
-            }
-        }
         public void SendData(params object[] data)
         {
 			string clientMessage = "";
 			foreach (object arg in data) 
 				clientMessage += clean(arg.ToString()) + "|";
-            clientMessage += Time.time + "|"; // so no hashes are the same
-            string hash = ComputeSha256Hash(clientMessage);
-            clientMessage += hash;
-            hashesAwaiting.Add(hash);
-            StartCoroutine(WaitForHash(hash, clientMessage));
-            _SendData(clientMessage, hash);
+            _SendData(clientMessage);
         }
-		void _SendData(string clientMessage, string hash) {
-			Utilities.LogMethodCallStart();
-			// Utilities.Log("Client sending message: " + clientMessage);
-			// clean clientMessage
+		void _SendData(string clientMessage) {
 			if (!clientMessage.EndsWith("\n"))
 				clientMessage = clientMessage + "\n";
-			if (socketConnection == null || !socketConnection.Connected)
-			{
-				StartCoroutine(SendDataDelayed(clientMessage, 1)); // wait a second
-                if (hash != "")
-                    hashesAwaiting.Remove(hash); // not going to get a response from this one
-				return;
-            }
             try
             {
                 NetworkStream stream = socketConnection.GetStream();
@@ -619,14 +547,13 @@ namespace ModLoaderSolution
                 {
                     byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);
                     stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-                    stream.Flush(); // Ensure data is flushed immediately (prevent truncation)
+                    stream.Flush(); // Ensure data is flushed immediately
                 }
             }
             catch (SocketException socketException)
             {
                 Utilities.Log("Socket exception: " + socketException);
             }
-			Utilities.LogMethodCallEnd();
 		}
         public void OnDestroy()
 		{

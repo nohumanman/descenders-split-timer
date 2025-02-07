@@ -1,94 +1,13 @@
-import contextvars
+""" Database Management System (DBMS) for managing data using SQLAlchemy. """
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, BigInteger, REAL, TIMESTAMP
-from sqlalchemy.sql.expression import func
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
-from datetime import datetime, timedelta
 import time
-import logging
+from common.dbms_models import (
+    Player, PlayerTime, CheckpointTime, Trail,
+    Verification, WebsiteUser, PendingItems, AllTimes
+)
 
-Base = declarative_base()
-
-# Database Models
-class Player(Base):
-    __tablename__ = 'players'
-
-    steam_id = Column(String, primary_key=True)
-    steam_name = Column(String)
-
-class BikeType(Base):
-    __tablename__ = 'bike_types'
-
-    bike_id = Column(Integer, primary_key=True)
-    bike_name = Column(String)
-
-class PlayerTime(Base):
-    __tablename__ = 'player_times'
-
-    player_time_id = Column(BigInteger, primary_key=True)
-    steam_id = Column(String, ForeignKey('players.steam_id'))
-    submission_timestamp = Column(Float)
-    trail_id = Column(Integer, ForeignKey('trails.trail_id'))
-    bike_id = Column(Integer)#, ForeignKey(BikeType.bike_id))
-    starting_speed = Column(Float)
-    version = Column(String)
-    game_version = Column(String)
-    deleted = Column(Boolean)
-
-class CheckpointTime(Base):
-    __tablename__ = 'checkpoint_times'
-
-    player_time_id = Column(BigInteger, ForeignKey('player_times.player_time_id'), primary_key=True)
-    checkpoint_num = Column(Integer, primary_key=True)
-    checkpoint_time = Column(Float)
-
-
-class Trail(Base):
-    __tablename__ = 'trails'
-
-    trail_id = Column(Integer, primary_key=True)
-    trail_name = Column(String)
-    world_name = Column(String)
-
-class Verification(Base):
-    __tablename__ = 'verifications'
-
-    player_time_id = Column(BigInteger, primary_key=True)
-    verifier_id = Column(BigInteger)
-    verification_timestamp = Column(Float)
-    verified = Column(Boolean)
-
-class WebsiteUser(Base):
-    __tablename__ = 'website_users'
-
-    discord_id = Column(BigInteger, primary_key=True)
-    steam_id = Column(String)
-    discord_name = Column(String)
-    authorised = Column(Boolean)
-
-class FinalTimesDetailed(Base):
-    __tablename__ = 'final_times_detailed'
-    
-    player_time_id = Column(Integer, primary_key=True)
-    steam_id = Column(String, nullable=False)
-    submission_timestamp = Column(TIMESTAMP, nullable=False)
-    trail_id = Column(Integer, nullable=False)
-    bike_id = Column(Integer, nullable=False)
-    starting_speed = Column(Float, nullable=False)
-    version = Column(String, nullable=False)
-    game_version = Column(String, nullable=False)
-    deleted = Column(Boolean, nullable=False)
-    final_time = Column(Float, nullable=False)
-    verified = Column(Boolean, nullable=False, default=False)
-    verifier_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)  # Adjust ForeignKey table if necessary
-
-class PendingItems(Base):
-    __tablename__ = 'pending_items'
-
-    steam_id = Column(String, ForeignKey('players.steam_id'), primary_key=True)
-    item_id = Column(String, primary_key=True)
-    time_redeemed = Column(Float, primary_key=True)
 
 # Database Management System
 class DBMS:
@@ -106,8 +25,7 @@ class DBMS:
             async with self.engine.connect() as conn:
                 await conn.execute(select(1))
             return True
-        except Exception as e:
-            logging.error(f"Database connection failed: {e}")
+        except Exception:
             return False
 
     async def get_id_from_name(self, steam_name):
@@ -211,15 +129,26 @@ class DBMS:
     async def get_total_stored_times(self, timestamp: int = 0) -> int:
         async with self.async_session() as session:
             result = await session.execute(
-                select(FinalTimesDetailed)
-                .where(FinalTimesDetailed.submission_timestamp > timestamp)
+                select(AllTimes)
+                .where(AllTimes.submission_timestamp > timestamp)
             )
             return len(result.scalars().all())
 
-    async def get_trails(self) -> list[Trail]:
+    async def get_trails(self, only_populated = True) -> list[Trail]:
         async with self.async_session() as session:
-            result = await session.execute(select(Trail))
-            trails = result.scalars().all()
+            query = select(Trail.trail_name, Trail.world_name)
+            if only_populated:
+                from sqlalchemy import and_
+                query = (query.join(
+                        AllTimes,
+                        Trail.trail_id == AllTimes.trail_id
+                    )
+                    .where(and_(AllTimes.deleted.is_(False), AllTimes.verified))
+                    .group_by(Trail.trail_name, Trail.world_name)
+                )
+            print(query)
+            result = await session.execute(query)
+            trails = result.all()
             return [
                 {
                     "trail_name": trail.trail_name,
@@ -236,30 +165,47 @@ class DBMS:
             verified=True
         ) -> list[dict]:
         async with self.async_session() as session:
-            query = select(FinalTimesDetailed).filter_by(deleted=False, verified=verified)
+            query = (
+                select(AllTimes)  # Select all columns from the AllTimes model
+                .distinct(AllTimes.trail_id, AllTimes.steam_id)  # group by (trail_id, steam_id)
+                .filter_by(deleted=False, verified=verified) # don't include deleted times
+                .order_by(  # required for DISTINCT ON to work correctly
+                    AllTimes.trail_id,  # Order by trail_id first
+                    AllTimes.steam_id,  # Then order by steam_id
+                    AllTimes.final_time  # order by final_time for smallest final_time
+                )
+            )
+            # if we have a trail name then discriminate to that trail
             if trail_name is not None and world_name is not None:
-                query = query.join(Trail, Trail.trail_id == FinalTimesDetailed.trail_id).filter(Trail.trail_name == trail_name and Trail.world_name == world_name)
+                query = (query
+                    .join(Trail, Trail.trail_id == AllTimes.trail_id)
+                    .filter(
+                        Trail.trail_name == trail_name
+                        and Trail.world_name == world_name
+                    )
+                )
+            print(query)
+            query = query.order_by(AllTimes.final_time)
+            # if we want to limit then limit
             if num:
-                query = query.order_by(FinalTimesDetailed.final_time).limit(num)
-            else:
-                query = query.order_by(FinalTimesDetailed.final_time)
+                query = query.limit(num)
             result = await session.execute(query)
             times = result.scalars().all()
 
             return [
                 {
                     "place": i + 1,
-                    "starting_speed": final_times_detailed.starting_speed,
-                    "name": (await self.get_player(final_times_detailed.steam_id)),
-                    "bike": final_times_detailed.bike_id,
-                    "version": final_times_detailed.version,
-                    "verified":final_times_detailed.verified,
-                    "deleted":final_times_detailed.deleted,
-                    "time_id": final_times_detailed.player_time_id,
-                    "time": final_times_detailed.final_time,
-                    "submission_timestamp": final_times_detailed.submission_timestamp
+                    "starting_speed": all_times.starting_speed,
+                    "name": (await self.get_player(all_times.steam_id)),
+                    "bike": all_times.bike_id,
+                    "version": all_times.version,
+                    "verified":all_times.verified,
+                    "deleted":all_times.deleted,
+                    "time_id": all_times.player_time_id,
+                    "time": all_times.final_time,
+                    "submission_timestamp": all_times.submission_timestamp
                 }
-                for i, final_times_detailed in enumerate(times)
+                for i, all_times in enumerate(times)
             ]
     
     async def delete_time(self, time_id):
@@ -326,20 +272,20 @@ class DBMS:
 
     async def get_recent_times(self, page=1, itemsPerPage=10, sortBy="submission_timestamp", sortDesc=False):
         async with self.async_session() as session:
-            query = select(FinalTimesDetailed)
+            query = select(AllTimes)
             # TODO: This should be a dictionary
             if sortBy == "submission_timestamp":
-                query = query.order_by(FinalTimesDetailed.submission_timestamp.desc() if sortDesc else FinalTimesDetailed.submission_timestamp)
+                query = query.order_by(AllTimes.submission_timestamp.desc() if sortDesc else AllTimes.submission_timestamp)
             elif sortBy == "time":
-                query = query.order_by(FinalTimesDetailed.final_time.desc() if sortDesc else FinalTimesDetailed.final_time)
+                query = query.order_by(AllTimes.final_time.desc() if sortDesc else AllTimes.final_time)
             elif sortBy == "starting_speed":
-                query = query.order_by(FinalTimesDetailed.starting_speed.desc() if sortDesc else FinalTimesDetailed.starting_speed)
+                query = query.order_by(AllTimes.starting_speed.desc() if sortDesc else AllTimes.starting_speed)
             elif sortBy == "name":
-                query = query.order_by(FinalTimesDetailed.steam_id.desc() if sortDesc else FinalTimesDetailed.steam_id)
+                query = query.order_by(AllTimes.steam_id.desc() if sortDesc else AllTimes.steam_id)
             elif sortBy == "bike":
-                query = query.order_by(FinalTimesDetailed.bike_id.desc() if sortDesc else FinalTimesDetailed.bike_id)
+                query = query.order_by(AllTimes.bike_id.desc() if sortDesc else AllTimes.bike_id)
             elif sortBy == "version":
-                query = query.order_by(FinalTimesDetailed.version.desc() if sortDesc else FinalTimesDetailed.version)
+                query = query.order_by(AllTimes.version.desc() if sortDesc else AllTimes.version)
 
             if itemsPerPage != -1 and page and itemsPerPage:
                 query = query.limit(itemsPerPage).offset((page - 1) * itemsPerPage)
@@ -347,17 +293,17 @@ class DBMS:
             times = result.scalars().all()
             return [
                 {
-                    "starting_speed": final_times_detailed.starting_speed,
-                    "name": await self.get_player(final_times_detailed.steam_id),
-                    "bike": final_times_detailed.bike_id,
-                    "version": final_times_detailed.version,
-                    "verified":final_times_detailed.verified,
-                    "deleted":final_times_detailed.deleted,
-                    "time_id": str(final_times_detailed.player_time_id),
-                    "time": final_times_detailed.final_time,
-                    "submission_timestamp": final_times_detailed.submission_timestamp
+                    "starting_speed": all_times.starting_speed,
+                    "name": await self.get_player(all_times.steam_id),
+                    "bike": all_times.bike_id,
+                    "version": all_times.version,
+                    "verified":all_times.verified,
+                    "deleted":all_times.deleted,
+                    "time_id": str(all_times.player_time_id),
+                    "time": all_times.final_time,
+                    "submission_timestamp": all_times.submission_timestamp
                 }
-                for final_times_detailed in times
+                for all_times in times
             ]
 
     async def get_trail_average_starting_speed(self, trail_name, world_name):

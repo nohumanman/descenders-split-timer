@@ -4,6 +4,8 @@
         class="align-center mx-auto"
         :max-width="height"
       >
+      
+      
       <v-row>
         <v-col cols="12">
           <v-card class="mx-auto" max-width="1000" outlined raised>
@@ -12,6 +14,29 @@
             </v-card-title>
           </v-card>
         </v-col>
+      </v-row>
+      <v-row>
+        <v-navigation-drawer width="400">
+        <v-list-item title="Worlds"></v-list-item>
+        <v-divider></v-divider>
+        <v-list-item>
+          <v-text-field
+            v-model="worldSearch"
+            prepend-icon="mdi-magnify"
+            hide-details
+            single-line
+          ></v-text-field>
+        </v-list-item>
+        <v-list-item 
+          v-for="world in searchedWorlds" 
+          :key="world" 
+          link 
+          @click="selectWorld(world)" 
+          :class="{ 'v-list-item--active': selectedWorld === world }"
+        >
+          {{ world }}
+        </v-list-item>
+      </v-navigation-drawer>
       </v-row>
       <v-row>
         <v-col v-for="trail in c_trails" cols="12" sm="12" md="12" lg="6">
@@ -25,9 +50,10 @@
               {{ trail.trail_name }}
             </v-card-title>
             <v-card-subtitle class=text-center>
-              {{  trail.world_name }}
+              {{  trail.world_name }} <v-btn icon="mdi-refresh" @click="refreshLeaderboard(trail)"></v-btn>
             </v-card-subtitle>
             <v-data-table-virtual
+              :loading="!trail.leaderboard"
               disable-sort
               :headers="headers"
               :items="trail.leaderboard"
@@ -35,7 +61,12 @@
               item-value="name"
             >
               <template v-slot:item.place="{ item }">
-                {{ item.place }}
+                <v-icon
+                  v-if="item.place == '1' || item.place == '2' || item.place == '3'"
+                  :color="item.place == '1' ? 'yellow' : item.place == '2' ? 'grey' : 'orange'">
+                  mdi-medal
+                </v-icon>
+                  {{ item.place }}
               </template>
               <template v-slot:item.name="{ item }">
                 {{ item.name }}
@@ -72,11 +103,26 @@ export default {
           { title: 'Time', align: 'center', key: 'time' },
           { title: '', align: 'end', key: 'time_id' },
         ],
+      selectedWorld: '',
+      worldSearch: '',
     };
   },
   computed: {
     c_trails: function () {
-      return this.trails.filter(i => i.leaderboard != null && i.leaderboard.length !== 0)
+      return this.trails.filter(i => i.world_name == this.selectedWorld)
+    },
+    searchedWorlds: function(){
+      return this.worlds.filter(i => i.toLowerCase().includes(this.worldSearch.toLowerCase()))
+    },
+    worlds: function () {
+      var wrlds = [];
+      for (let i = 0; i < this.trails.length; i++) {
+        if (!wrlds.includes(this.trails[i].world_name)) {
+          wrlds.push(this.trails[i].world_name);
+        }
+      }
+      console.log(wrlds);
+      return wrlds;
     },
   },
   methods: {
@@ -85,6 +131,26 @@ export default {
       const response = await fetch(`${apiUrl}/get-leaderboard?trail_name=${trail.trail_name}&world_name=${trail.world_name}`);
       const data = await response.json();
       return data;
+    },
+    async selectWorld(world) {
+      console.log(world);
+      this.selectedWorld = world;
+      // add leaderboard to each trail
+      for (let i = 0; i < this.trails.length; i++) {
+        if (this.trails[i].world_name == world) {
+          this.trails[i].leaderboard = await this.getLeaderboard(this.trails[i]);
+        }
+      }
+    },
+    refreshLeaderboard(trail){
+      for (let i = 0; i < this.trails.length; i++) {
+        if (this.trails[i].world_name == trail.world_name && this.trails[i].trail_name == trail.trail_name) {
+          this.trails[i].leaderboard = null;
+          this.getLeaderboard(this.trails[i]).then(data => {
+            this.trails[i].leaderboard = data;
+          });
+        }
+      }
     },
     secs_to_str(secs){
             secs = parseFloat(secs);
@@ -109,20 +175,9 @@ export default {
       .then(response => response.json())
       .then(async data => {
         this.trails = data["trails"];
-        const promises = this.trails.map(trail => {
-          return this.getLeaderboard(trail).then(leaderboard => {
-            trail.leaderboard = leaderboard;
-          });
-        });
-
-        // Continue with other code without waiting for the results
-        await Promise.all(promises);
-
       })
     }
   };
-
-
 </script>
 
 <script setup>
