@@ -1,9 +1,9 @@
 <template>
     <v-container>
       <h1>Live Racing</h1>
-      <v-row>
-        <v-col cols="12" md="2">
-          <v-card v-for="user in users" :key="user.steam_id">
+      <v-row cols="12" md="2">
+        <v-col v-for="user in users" :key="user.steam_id">
+          <v-card>
             <v-card-title>{{user.steam_name}}</v-card-title>
             <v-card-subtitle>{{user.steam_id}}</v-card-subtitle>
             <v-card-text>
@@ -20,7 +20,7 @@
         </v-col>
       </v-row>
     </v-container>
-  </template>  
+  </template>
 
   <script>
     export default {
