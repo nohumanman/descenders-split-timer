@@ -12,6 +12,7 @@
         if (token) {
             // Store token in localStorage (or Vuex/Pinia)
             localStorage.setItem("discord_token", token);
+
             // Redirect to home page
             router.push("/live-racing");
         } else {

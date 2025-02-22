@@ -23,6 +23,7 @@ class VuejsSocketServer:
         self.sio.event(self.connect)
         self.sio.event(self.disconnect)
         self.sio.event(self.message)
+        self.sio.event(self.authenticate)
 
         self.identifiers = {
             'total_users_online': lambda: len(self.web_socket.players),
@@ -31,20 +32,31 @@ class VuejsSocketServer:
             'times_submitted_past_30_days': self.get_times_past_30_days
         }
     
+    def verify_discord_token(self, token):
+        """ Verify Discord OAuth token and return user info """
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(DISCORD_API_URL, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()  # Return user data if valid
+        else:
+            return None
+
     async def authenticate(self, sid, data):
         """ Authenticate a user when they send a valid Discord token """
-        token = data["token"]
+        print(data)
+        token = json.loads(data)["token"]
         if not token:
             self.sio.emit("auth_error", {"message": "No token provided"}, room=sid)
             return
         user = self.verify_discord_token(token)
         if not user:
-            self.sio.emit("auth_error", {"message": "Invalid token"}, room=sid)
+            await self.sio.emit("auth_error", {"message": "Invalid token"}, room=sid)
             return
         # Store the user in the session
-        self.sio.save_session(sid, {"user": user})
+        await self.sio.save_session(sid, {"user": user})
         print(f"User {user['username']} authenticated")
-        self.sio.emit("auth_success", {"message": "Authenticated", "user": user}, room=sid)
+        await self.sio.emit("auth_success", {"message": "Authenticated", "user": user}, room=sid)
 
     async def get_times_past_30_days(self):
         return await self.dbms.get_total_stored_times(timestamp=time.time()-2592000)
@@ -94,8 +106,11 @@ class VuejsSocketServer:
                     'data': res
                 }), room=sid)
             elif data['type'] == 'eval':
-                session = self.sio.get_session(sid)
+                session = await self.sio.get_session(sid)
                 user = session.get("user") if session else None
+                if user is None:
+                    print("SESSION NOT FOUND!")
+                    return
                 if user['username'] != 'nohumanman':
                     print("USER NOT AUTHENTICATED TO DO EVAL")
                     return

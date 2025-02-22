@@ -30,6 +30,10 @@
       }
     },
     mounted() {
+      // awesome! now we need to tell the websocket that we're authenticated
+      this.$socket.emit('authenticate', JSON.stringify({
+        'token': localStorage.getItem("discord_token")
+      }));
       this.$socket.on('users_update', (data) => {
         // data is like [{steam_id: 123, steam_name: 'name', eval: 'eval'}, ...]
         data.forEach(user => {
