@@ -37,7 +37,7 @@ services:
       context: .
       dockerfile: websocket-api/Dockerfile
     ports:
-      - "65432:65432"
+      - "65433:65433"
       - "40000:40000"
     depends_on:
       - postgres

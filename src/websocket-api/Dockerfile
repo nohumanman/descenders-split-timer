@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./websocket-api .
 
 # expose websocket port
-EXPOSE 65432
+EXPOSE 65433
 
 # expose vuejs websocket prot
 EXPOSE 40000

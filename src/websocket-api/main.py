@@ -7,7 +7,7 @@ from common.dbms import DBMS
 
 # Constants for configuration
 IP = "0.0.0.0"
-SOCKET = 65432
+SOCKET = 65433
 POSTGRES_HOST = os.getenv("POSTGRES_HOST")
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
