@@ -39,7 +39,7 @@
         // data is like [{steam_id: 123, steam_name: 'name', eval: 'eval'}, ...]
         data.forEach(user => {
           // if use exists, update it, otherwise add it
-          user = [];
+          this.users = [];
           let index = this.users.findIndex(u => u.steam_id === user.steam_id);
           if (index !== -1) {
             // UPDATE (do not remove existing keys)
