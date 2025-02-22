@@ -61,6 +61,12 @@ class Webserver():
                 self.get_trails, ["GET"]
             ),
             WebserverRoute(
+                '/upload-replay/',
+                'upload_replay',
+                self.upload_replay,
+                ['POST']
+            ),
+            WebserverRoute(
                 '/get-total-stored-times',
                 'get_total_stored_times',
                 self.get_total_stored_times,
@@ -86,6 +92,17 @@ class Webserver():
                 view_func=route.view_func,
                 methods=route.methods
             )
+
+    async def upload_replay(self):
+        """ Function to upload a replay to the server """
+        if "replay" not in request.files:
+            return "No file part"
+        replay = request.files["replay"]
+        time_id = request.form.get("time_id")
+        if replay.filename == "":
+            return "No selected file"
+        replay.save(f"replays/{time_id}.replay")
+        return "Replay uploaded successfully!"
 
     async def get_gb_stored_replays(self):
         """Get the file size of replays in GB """
