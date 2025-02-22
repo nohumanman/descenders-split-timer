@@ -190,7 +190,8 @@ class DBMS:
                 query = query.limit(num)
             result = await session.execute(query)
             times = result.scalars().all()
-
+            # order times by final time
+            times = sorted(times, key=lambda x: x.final_time)
             return [
                 {
                     "place": i + 1,
