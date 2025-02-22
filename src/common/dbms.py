@@ -146,7 +146,6 @@ class DBMS:
                     .where(and_(AllTimes.deleted.is_(False), AllTimes.verified))
                     .group_by(Trail.trail_name, Trail.world_name)
                 )
-            print(query)
             result = await session.execute(query)
             trails = result.all()
             return [
@@ -184,7 +183,6 @@ class DBMS:
                         and Trail.world_name == world_name
                     )
                 )
-            print(query)
             query = query.order_by(AllTimes.final_time)
             # if we want to limit then limit
             if num:

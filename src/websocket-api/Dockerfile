@@ -20,5 +20,8 @@ COPY ./websocket-api .
 # expose websocket port
 EXPOSE 65432
 
+# expose vuejs websocket prot
+EXPOSE 40000
+
 # run application
 CMD ["python3", "-u", "main.py"]

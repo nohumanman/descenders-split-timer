@@ -20,8 +20,15 @@
 
 <script setup>
   const apiUrl = import.meta.env.VITE_APP_API_URL;
-  console.log(apiUrl);
 </script>
 
-
-
+<script>
+  export default {
+    name: 'App',
+    mounted() {
+      console.log('App created');
+      console.log(this.$socket)
+      this.$socket.emit('message', 'lmao')
+    }
+  }
+</script>
