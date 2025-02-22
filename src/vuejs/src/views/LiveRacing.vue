@@ -37,9 +37,9 @@
       }));
       this.$socket.on('users_update', (data) => {
         // data is like [{steam_id: 123, steam_name: 'name', eval: 'eval'}, ...]
+        this.users = [];
         data.forEach(user => {
           // if use exists, update it, otherwise add it
-          this.users = [];
           let index = this.users.findIndex(u => u.steam_id === user.steam_id);
           if (index !== -1) {
             // UPDATE (do not remove existing keys)
