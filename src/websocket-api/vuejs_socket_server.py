@@ -6,6 +6,7 @@ import socketio
 from aiohttp import web
 import json
 import requests
+import os
 
 DISCORD_API_URL = "https://discord.com/api/users/@me"
 
@@ -28,10 +29,19 @@ class VuejsSocketServer:
         self.identifiers = {
             'total_users_online': lambda: len(self.web_socket.players),
             'total_stored_times': self.dbms.get_total_stored_times,
-            'total_replay_size': lambda: 3,
+            'total_replay_size': self.get_total_replay_size,
             'times_submitted_past_30_days': self.get_times_past_30_days
         }
     
+    def get_total_replay_size(self):
+        # get size of ./replays
+        size = 0
+        for dirpath, _, filenames in os.walk("./replays"):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                size += os.path.getsize(fp)
+        return size
+
     def verify_discord_token(self, token):
         """ Verify Discord OAuth token and return user info """
         headers = {"Authorization": f"Bearer {token}"}
