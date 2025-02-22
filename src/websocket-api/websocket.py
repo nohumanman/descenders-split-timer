@@ -64,6 +64,8 @@ operations = {
         lambda netPlayer, data: netPlayer.set_version(str(data[0])),
     "LOG_LINE":
         lambda netPlayer, data: netPlayer.log_line(str(data[0:])),
+    "SPECTATE":
+        lambda netPlayer, data: netPlayer.set_spectating(data[0]),
 }
 
 
@@ -122,6 +124,15 @@ class WebSocket():
             + trail_name + "|"
             + leaderboard
         )
+
+    async def set_spectating(self, steam_id: str):
+        """ Set the player that a player is spectating """
+        self.info.spectating_id = steam_id
+        for player in self.parent.players:
+            if player.info.steam_id == steam_id:
+                self.info.spectating = player.info.steam_name
+                return
+        self.info.spectating = ""
 
     async def send_speedrun_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """

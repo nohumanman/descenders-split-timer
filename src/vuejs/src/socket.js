@@ -13,8 +13,6 @@ socket.on('disconnect', () => {
     socket.connect();
 });
 
-socket.on('message', (data) => {
-    console.log('Message from server:', data);
-});
+
 
 export default socket;

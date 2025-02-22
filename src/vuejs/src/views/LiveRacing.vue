@@ -15,6 +15,7 @@
 
             </v-text-field>
             <v-btn @click='sendEval(user)'>Send</v-btn>
+            <v-btn @click="spectatePlayer(user)">SPECTATE</v-btn>
           </v-card>
         </v-col>
       </v-row>
@@ -50,16 +51,36 @@
           }
         });
       })
+      this.$socket.on('message', (data) => {
+        console.log('Message from server:', data);
+
+            var data_json = JSON.parse(data);
+            if (data_json['type'] == 'send'){
+                if (data_json['identifier'] == 'steam_id'){
+                  console.log("Setting steam_id to", data_json['data']);
+                    localStorage.setItem("steam_id", data_json['data']);
+                }
+            }
+
+      });
       this.$socket.emit('message', 'get_users');
       setInterval(() => {
         this.$socket.emit('message', 'get_users');
       }, 800);
     }
-  ,
-  methods: {
-    sendEval(user) {
-      this.$socket.emit('message', {'type': 'eval', 'data': user});
-    }
+    ,
+    methods: {
+      sendEval(user) {
+        this.$socket.emit('message', {'type': 'eval', 'data': user});
+      },
+      spectatePlayer(user){
+        // we need to find ourselves
+        var us = this.users.find(u => u.steam_id === localStorage.getItem('steam_id'));
+        // then tell ourself to spectate the player
+        us.eval = `spectate|${user.steam_id}`;
+        this.sendEval(us);
+        // the server needs to know
+      }
     }
   }
   </script>

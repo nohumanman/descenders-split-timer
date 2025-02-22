@@ -254,7 +254,6 @@ namespace ModLoaderSolution
 				return;
 			Utilities.Log("Message Recieved: " + message);
 			if (message == "SUCCESS") {
-				SendData("UNITY_CLIENT");
 				NetStart();
 			}
 			if (message.StartsWith("ROTATE|"))
@@ -370,7 +369,10 @@ namespace ModLoaderSolution
 			if (message.StartsWith("SPECTATE"))
             {
 				string id = message.Split('|')[1];
-				Utilities.instance.SpectatePlayerCustom(id);
+                // tell the server that we're spectating this id
+                Debug.Log("Telling server we're spectating them");
+                NetClient.Instance.SendData("SPECTATE", id);
+                Utilities.instance.SpectatePlayerCustom(id);
             }
 			if (message.StartsWith("SET_BIKE"))
             {

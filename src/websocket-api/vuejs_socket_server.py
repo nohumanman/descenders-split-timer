@@ -42,6 +42,15 @@ class VuejsSocketServer:
         else:
             return None
 
+    def get_steam_id_from_discord_id(self, token):
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(DISCORD_API_URL + '/connections', headers=headers)
+        if response.status_code == 200:
+            connections = response.json()
+            for connection in connections:
+                if connection['type'] == 'steam':
+                    return connection['id']
+
     async def authenticate(self, sid, data):
         """ Authenticate a user when they send a valid Discord token """
         print(data)
@@ -54,7 +63,8 @@ class VuejsSocketServer:
             await self.sio.emit("auth_error", {"message": "Invalid token"}, room=sid)
             return
         # Store the user in the session
-        await self.sio.save_session(sid, {"user": user})
+        await self.sio.save_session(sid, {"user": user, "token": token, "steam_id": self.get_steam_id_from_discord_id(token)})        
+        await self.sio.emit("message", json.dumps({"type": "send", "identifier": "steam_id", "data": self.get_steam_id_from_discord_id(token)}), room=sid)
         print(f"User {user['username']} authenticated")
         await self.sio.emit("auth_success", {"message": "Authenticated", "user": user}, room=sid)
 
@@ -111,7 +121,7 @@ class VuejsSocketServer:
                 if user is None:
                     print("SESSION NOT FOUND!")
                     return
-                if user['username'] != 'nohumanman':
+                if user['id'] != '437237976347705346': # TODO: Modularise this
                     print("USER NOT AUTHENTICATED TO DO EVAL")
                     return
 
