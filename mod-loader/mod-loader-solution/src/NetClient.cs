@@ -195,7 +195,7 @@ namespace ModLoaderSolution
 			form.AddBinaryData("replay", bytes, "replay");
 
 			using (UnityWebRequest www = UnityWebRequest.Post(
-				"https://modkit.nohumanman.com/upload-replay",
+				"https://modkitv2.nohumanman.com/api/upload-replay",
 				form
 			))
 			{
