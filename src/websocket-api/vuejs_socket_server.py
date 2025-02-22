@@ -36,10 +36,9 @@ class VuejsSocketServer:
     def get_total_replay_size(self):
         # get size of ./replays
         size = 0
-        for dirpath, _, filenames in os.walk("./replays"):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                size += os.path.getsize(fp)
+        os.system('du -sh ./replays')
+        with os.popen('du -sh ./replays') as p:
+            size = p.read().split()[0]
         return size
 
     def verify_discord_token(self, token):
