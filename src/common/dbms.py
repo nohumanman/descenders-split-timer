@@ -15,7 +15,7 @@ class DBMS:
 
     def __init__(self, db_url: str):
         # check if db_url is connectable
-        self.engine = create_async_engine(db_url, echo=False, pool_size=20, max_overflow=0)
+        self.engine = create_async_engine(db_url, echo=False, pool_size=30, max_overflow=30)
         self.async_session = sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
