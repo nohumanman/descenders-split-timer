@@ -23,7 +23,7 @@ namespace ModLoaderSolution
 		private Thread clientReceiveThread;
 		bool PlayerCollision = false;
 		List<string> messages = new List<string>();
-		public int port = 65432;
+		public int port = 65433;
 		public string ip = "86.26.185.112";
 		static string version = "0.3.02";
 		static bool quietUpdate = false;
