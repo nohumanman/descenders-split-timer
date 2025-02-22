@@ -5,7 +5,9 @@ import time
 import socketio
 from aiohttp import web
 import json
-import inspect
+import requests
+
+DISCORD_API_URL = "https://discord.com/api/users/@me"
 
 class VuejsSocketServer:
     def __init__(self, dbms: DBMS, web_socket: WebSocket, host='0.0.0.0', port=40000):
@@ -29,6 +31,21 @@ class VuejsSocketServer:
             'times_submitted_past_30_days': self.get_times_past_30_days
         }
     
+    async def authenticate(self, sid, data):
+        """ Authenticate a user when they send a valid Discord token """
+        token = data["token"]
+        if not token:
+            self.sio.emit("auth_error", {"message": "No token provided"}, room=sid)
+            return
+        user = self.verify_discord_token(token)
+        if not user:
+            self.sio.emit("auth_error", {"message": "Invalid token"}, room=sid)
+            return
+        # Store the user in the session
+        self.sio.save_session(sid, {"user": user})
+        print(f"User {user['username']} authenticated")
+        self.sio.emit("auth_success", {"message": "Authenticated", "user": user}, room=sid)
+
     async def get_times_past_30_days(self):
         return await self.dbms.get_total_stored_times(timestamp=time.time()-2592000)
 
@@ -37,6 +54,16 @@ class VuejsSocketServer:
 
     async def disconnect(self, sid):
         print('Client disconnected:', sid)
+
+    def verify_discord_auth(self, token):
+        """ Verify Discord OAuth token with Discord API """
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(DISCORD_API_URL, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()  # Return user data if valid
+        else:
+            return None
 
     async def message(self, sid, data):
         if data == 'get_users':
@@ -67,6 +94,12 @@ class VuejsSocketServer:
                     'data': res
                 }), room=sid)
             elif data['type'] == 'eval':
+                session = self.sio.get_session(sid)
+                user = session.get("user") if session else None
+                if user['username'] != 'nohumanman':
+                    print("USER NOT AUTHENTICATED TO DO EVAL")
+                    return
+
                 steam_id = data['data']['steam_id']
                 # This is a security risk, but it's just for testing
                 for player in self.web_socket.players:

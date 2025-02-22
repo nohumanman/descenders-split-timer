@@ -10,7 +10,7 @@
         <v-col class="d-none d-md-flex">
             <template v-for="route in routes">
             <v-btn
-                v-if="route.name !== 'Home'"
+                v-if="route.name !== 'Home' && route.inHomeBar === true"
                 text
                 :to="route.path"
                 :key="route.name"
@@ -71,8 +71,9 @@ import { routes } from '@/router'
 </script>
 
 <script setup>
-  const apiUrl = import.meta.env.VITE_APP_API_URL;
   import { useDisplay } from 'vuetify'
+  const apiUrl = import.meta.env.VITE_APP_API_URL;
+  
   const { xs, sm } = useDisplay()
 
   var isOnline = true;
