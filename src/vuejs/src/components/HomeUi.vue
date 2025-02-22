@@ -211,13 +211,24 @@
       }
     },
     mounted() {
-      this.$socket.on('data_update', (data) => {
-        // data is like {'total_users_online': 3}
-        for (const [key, value] of Object.entries(data)) {
-          this[key] = value;
+      this.$socket.on('message', (data) => {
+        try{
+          var data_json = JSON.parse(data);
+          if (data_json['type'] == 'send'){
+            this[data_json['identifier']] = data_json['data'];
+          }
+        }
+        catch (e){
+          console.log(e)
         }
       })
-      this.$socket.emit('message', 'get_data');
+      var toUpdate = ['total_replay_size', 'total_stored_times', 'total_users_online', 'times_submitted_past_30_days'];
+      toUpdate.forEach((ident) => {
+        this.$socket.emit('message', JSON.stringify({
+          'type': 'get',
+          'identifier': ident
+        }));
+      })
     }
   }
 

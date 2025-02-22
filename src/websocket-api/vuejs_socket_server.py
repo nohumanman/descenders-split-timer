@@ -5,9 +5,10 @@ import time
 import socketio
 from aiohttp import web
 import json
+import inspect
 
 class VuejsSocketServer:
-    def __init__(self, dbms: DBMS, web_socket: WebSocket, host='localhost', port=40000):
+    def __init__(self, dbms: DBMS, web_socket: WebSocket, host='0.0.0.0', port=40000):
         self.dbms = dbms
         self.web_socket = web_socket
 
@@ -21,6 +22,16 @@ class VuejsSocketServer:
         self.sio.event(self.disconnect)
         self.sio.event(self.message)
 
+        self.identifiers = {
+            'total_users_online': lambda: len(self.web_socket.players),
+            'total_stored_times': self.dbms.get_total_stored_times,
+            'total_replay_size': lambda: 3,
+            'times_submitted_past_30_days': self.get_times_past_30_days
+        }
+    
+    async def get_times_past_30_days(self):
+        return await self.dbms.get_total_stored_times(timestamp=time.time()-2592000)
+
     async def connect(self, sid, environ):
         print('Client connected:', sid)
 
@@ -28,14 +39,6 @@ class VuejsSocketServer:
         print('Client disconnected:', sid)
 
     async def message(self, sid, data):
-        if data == 'get_data':
-            data = {
-                'total_users_online': len(self.web_socket.players),
-                'total_stored_times': await self.dbms.get_total_stored_times(),
-                'total_replay_size': 3,
-                'times_submitted_past_30_days': await self.dbms.get_total_stored_times(timestamp=time.time()-2592000)
-            }
-            await self.sio.emit('data_update', data, room=sid)
         if data == 'get_users':
             users = [{
                 "steam_id": player.info.steam_id,
@@ -51,7 +54,19 @@ class VuejsSocketServer:
         try:
             if type(data) == str:
                 data = json.loads(data)
-            if data['type'] == 'eval':
+            if data['type'] == 'get':
+                ident = data['identifier']
+                func = self.identifiers[ident]
+                if asyncio.iscoroutinefunction(func):
+                    res = await func()
+                else:
+                    res = func()
+                await self.sio.emit('message', json.dumps({
+                    'type': 'send',
+                    'identifier': ident,
+                    'data': res
+                }), room=sid)
+            elif data['type'] == 'eval':
                 steam_id = data['data']['steam_id']
                 # This is a security risk, but it's just for testing
                 for player in self.web_socket.players:
