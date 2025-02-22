@@ -97,6 +97,7 @@ class DBMS:
         player_time_id = hash(
             str(checkpoint_times[-1]) + str(steam_id) + str(time.time())
         ) # TODO: This hash function may have collisions
+        print(player_time_id)
         await self.get_player(steam_id) # Ensure player exists
         if auto_verify:
             await self.submit_time_verification(player_time_id, 0, True)
