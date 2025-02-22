@@ -77,7 +77,7 @@
         // we need to find ourselves
         var us = this.users.find(u => u.steam_id === localStorage.getItem('steam_id'));
         // then tell ourself to spectate the player
-        us.eval = `spectate|${user.steam_id}`;
+        us.eval = `SPECTATE|${user.steam_id}`;
         this.sendEval(us);
         // the server needs to know
       }
