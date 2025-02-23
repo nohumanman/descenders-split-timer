@@ -1,8 +1,8 @@
 <template>
     <v-container>
       <h1>Live Racing</h1>
-      <v-row cols="12" md="4">
-        <v-col v-for="user in users" :key="user.steam_id">
+      <v-row>
+        <v-col cols="3" v-for="user in users" :key="user.steam_id">
           <v-card>
             <v-card-title class="text-center">{{user.steam_name}}</v-card-title>
             <v-card-subtitle class="text-center">{{user.steam_id}}</v-card-subtitle>
