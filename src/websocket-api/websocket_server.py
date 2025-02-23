@@ -32,6 +32,14 @@ class WebSocketServer():
         player.writer.close()
         del player
 
+    async def check_lifes(self):
+        """ Checks if the players are still alive """
+        while True:
+            for player in self.players:
+                if not player.alive:
+                    self.delete_player(player)
+            await asyncio.sleep(1)
+
     async def handle_client(self, reader: StreamReader, writer: StreamWriter):
         """ Creates a client from their socket and address """        
         address = writer.get_extra_info('peername')

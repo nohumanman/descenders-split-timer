@@ -32,6 +32,8 @@ async def start():
             unity_socket_server.port
         )
         print("Serving on", server.sockets[0].getsockname())
+        # also run in background unity_socket_server.check_lifes()
+        asyncio.create_task(unity_socket_server.check_lifes())
         await server.serve_forever()
 
     await vuejs_socket_server.run_async()
