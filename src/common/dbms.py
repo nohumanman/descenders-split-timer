@@ -1,6 +1,7 @@
 """ Database Management System (DBMS) for managing data using SQLAlchemy. """
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import func
 from sqlalchemy.future import select
 import time
 from common.dbms_models import (
@@ -309,7 +310,7 @@ class DBMS:
     async def get_trail_average_starting_speed(self, trail_name, world_name):
         async with self.async_session() as session:
             result = await session.execute(
-                select(PlayerTime.starting_speed)
+                select(func.avg(PlayerTime.starting_speed))
                 .join(Trail, Trail.trail_id == PlayerTime.trail_id)
                 .where(
                     Trail.trail_name == trail_name,
@@ -317,9 +318,9 @@ class DBMS:
                     PlayerTime.starting_speed != 0,
                     PlayerTime.deleted.is_(False),
                 )
-            )            
-            speeds = result.scalars().all()
-            return sum(speeds) / len(speeds) if speeds else 10000000000
+            )
+            avg_speed = result.scalar_one_or_none()
+            return avg_speed if avg_speed else 10000000000
 
     async def close(self):
         await self.engine.dispose()
