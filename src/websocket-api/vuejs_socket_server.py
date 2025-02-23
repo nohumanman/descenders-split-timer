@@ -105,7 +105,8 @@ class VuejsSocketServer:
                 "world_name": player.info.world_name,
                 "last_trick": player.info.last_trick,
                 "time_started": player.info.time_started,
-                "trails": str([{player.trails[trail].trail_name} for trail in player.trails])
+                "trails": str([{player.trails[trail].trail_name} for trail in player.trails]),
+                "version": player.info.version
             } for player in self.web_socket.players]
             await self.sio.emit('users_update', users, room=sid)
         try:
@@ -129,7 +130,7 @@ class VuejsSocketServer:
                 if user is None:
                     print("SESSION NOT FOUND!")
                     return
-                if user['id'] != '437237976347705346': # TODO: Modularise this
+                if user['id'] != '437237976347705346' and user['id'] != '360866829930987521': # TODO: Modularise this
                     print("USER NOT AUTHENTICATED TO DO EVAL")
                     return
 
