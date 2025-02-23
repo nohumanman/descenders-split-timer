@@ -80,7 +80,7 @@ namespace ModLoaderSolution
                             Destroy((GameObject)obj);
                     }
                     // objects with components that need destroying
-                    List<string> depricated_components = new List<string>() { "BikeSwitcherEnabler", "JsonMapInfo", "TimerText" };
+                    List<string> depricated_components = new List<string>() { "BikeSwitcherEnabler", "JsonMapInfo", "TimerText", "MedalSystemInfo" };
                     foreach(string depricated_component in depricated_components)
                     {
                         string jsonString = JsonUtility.ToJson(g.GetComponent(depricated_component));

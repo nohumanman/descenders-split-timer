@@ -171,7 +171,7 @@ class TrailTimer():
         await self.network_player.send(f"INVALIDATE_TIME|{reason}\\n")
         self.timer_info.started = False
 
-    async def can_end(self) -> bool:
+    async def can_end(self) -> tuple[bool, str]:
         """ Check if the data is valid to be able to end the timer """
         errors = {
             "ERR006: Timer not started":
@@ -200,7 +200,6 @@ class TrailTimer():
         }
         for error_message, error in errors.items():
             if error():
-                await self.invalidate_timer(error_message + "")
                 return (False, error_message)
         return (True, "No errors")
 
@@ -211,10 +210,6 @@ class TrailTimer():
         # reset the timer
         was_started = self.timer_info.started
         self.timer_info.started = False
-        spectated_by = None
-        for player in self.network_player.parent.players:
-            if str(player.info.spectating_id) == str(self.network_player.info.steam_id):
-                spectated_by = str(player.info.steam_id)
         # submit the time to the database
         time_id = await self.network_player.dbms.submit_time(
             self.network_player.info.steam_id,
@@ -225,7 +220,8 @@ class TrailTimer():
             self.timer_info.starting_speed,
             self.network_player.info.version,
             "",
-            self.timer_info.auto_verify and can_end[0]
+            self.timer_info.auto_verify and can_end[0],
+            deleted=not can_end[0]
         )
         # ask client to upload replay
         await self.network_player.send(f"UPLOAD_REPLAY|{time_id}")

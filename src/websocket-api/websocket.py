@@ -53,7 +53,7 @@ operations = {
     "SPEEDRUN_DOT_COM_LEADERBOARD":
         lambda netPlayer, data: netPlayer.send_leaderboard(data[0]),
     "LEADERBOARD":
-        lambda netPlayer, data: netPlayer.send_speedrun_leaderboard(data[0]),
+        lambda netPlayer, data: netPlayer.send_internal_leaderboard(data[0]),
     "CHAT_MESSAGE":
         lambda netPlayer, data: netPlayer.send_chat_message(data[0]),
     "START_SPEED":
@@ -134,7 +134,7 @@ class WebSocket():
                 return
         self.info.spectating = ""
 
-    async def send_speedrun_leaderboard(self, trail_name: str):
+    async def send_internal_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """
         leaderboard = await self.get_leaderboard(trail_name)
         await self.send(
@@ -230,8 +230,6 @@ class WebSocket():
                     "place": leaderboard["place"],
                     "time": leaderboard["time"],
                     "name": leaderboard["name"],
-                    "bike": leaderboard["bike"],
-                    "verified": leaderboard["verified"],
                 }
                 for leaderboard in await self.dbms.get_leaderboard(
                     trail_name,

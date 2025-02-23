@@ -10,8 +10,6 @@ namespace ModLoaderSolution
         public string[] name;
         public int[] place;
         public float[] time;
-        public float[] pen;
-        public string[] verified;
         int nameMaxLen = 15;
         string MakeLengthOf(string text, int lengthAim)
         {
@@ -30,11 +28,6 @@ namespace ModLoaderSolution
         }
         public string LeaderboardAsString()
         {
-            if (pen == null)
-            {
-                pen = new float[name.Length];
-                verified = new string[name.Length];
-            }
             if (name == null || name.Length == 0)
                 return "";
             string leaderboardString = "";

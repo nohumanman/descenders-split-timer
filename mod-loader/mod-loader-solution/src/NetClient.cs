@@ -304,6 +304,7 @@ namespace ModLoaderSolution
 					if (trail.name == trailName)
 					{
 						string leaderboardJson = leaderboard[2];
+						Debug.Log("Speedrun.com:" + leaderboardJson);
 						LeaderboardInfo leaderboardInfo = JsonUtility.FromJson<LeaderboardInfo>(leaderboardJson.Replace("'", "\""));
 						trail.leaderboardText.GetComponent<TextMesh>().text = trailName + " (from speedrun.com)\n" + leaderboardInfo.LeaderboardAsString();
 					}

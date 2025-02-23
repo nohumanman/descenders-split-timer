@@ -71,11 +71,12 @@ class WebSocketServer():
                 if message == "HEARTBEAT|":
                     continue
                 asyncio.create_task(player.handle_data(message))
-        except asyncio.TimeoutError:
-            print(f"Player {player} timed out")
-        except DisconnectError:
+        except (asyncio.TimeoutError, ConnectionResetError, BrokenPipeError, DisconnectError):
             print(f"Player {player} disconnected")
         finally:
             writer.close()
-            await writer.wait_closed()
+            try:
+                await writer.wait_closed()
+            except ConnectionResetError:
+                pass
             self.delete_player(player)

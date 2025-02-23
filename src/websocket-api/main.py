@@ -8,10 +8,10 @@ from common.dbms import DBMS
 # Constants for configuration
 IP = "0.0.0.0"
 SOCKET = 65433
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_HOST = 'localhost'#os.getenv("POSTGRES_HOST")
+POSTGRES_USER = 'postgres'#os.getenv("POSTGRES_USER")
+POSTGRES_DB = 'postgres'#os.getenv("POSTGRES_DB")
+POSTGRES_PASSWORD = 'postgres'#os.getenv("POSTGRES_PASSWORD")
 
 """Initialize all the components for the server."""
 

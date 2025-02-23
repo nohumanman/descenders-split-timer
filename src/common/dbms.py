@@ -93,7 +93,8 @@ class DBMS:
         starting_speed: float,
         version: str,
         game_version: str,
-        auto_verify: bool = True
+        auto_verify: bool = True,
+        deleted: bool = False
     ):
         player_time_id = hash(
             str(checkpoint_times[-1]) + str(steam_id) + str(time.time())
@@ -112,7 +113,7 @@ class DBMS:
                 starting_speed=starting_speed,
                 version=version,
                 game_version=game_version,
-                deleted=False
+                deleted=deleted
             )
             session.add(new_time)
             await session.commit()
@@ -269,7 +270,32 @@ class DBMS:
         pass
 
     async def get_global_best_checkpoint_times(self, trail_name, world_name) -> list[float]|None:
-        pass
+        async with self.async_session() as session:
+            # get the best time for the trail
+            query = (
+                select(AllTimes)
+                .join(Trail, Trail.trail_id == AllTimes.trail_id)
+                .filter(
+                    Trail.trail_name == trail_name,
+                    Trail.world_name == world_name,
+                    AllTimes.deleted.is_(False),
+                    AllTimes.verified
+                )
+                .order_by(AllTimes.final_time)
+                .limit(1)
+            )
+            # then get the checkpoint times for that time
+            result = await session.execute(query)
+            best_time = result.scalar_one_or_none()
+            if best_time is None:
+                return None
+            query = (
+                select(CheckpointTime.checkpoint_time)
+                .filter_by(player_time_id=best_time.player_time_id)
+                .order_by(CheckpointTime.checkpoint_num)
+            )
+            result = await session.execute(query)
+            return [time for time in result.scalars().all()]
 
     async def get_recent_times(self, page=1, itemsPerPage=10, sortBy="submission_timestamp", sortDesc=False):
         async with self.async_session() as session:
