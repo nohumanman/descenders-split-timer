@@ -1,21 +1,18 @@
 <template>
     <v-container>
       <h1>Live Racing</h1>
-      <v-row cols="12" md="2">
+      <v-row cols="12" md="4">
         <v-col v-for="user in users" :key="user.steam_id">
           <v-card>
-            <v-card-title>{{user.steam_name}}</v-card-title>
-            <v-card-subtitle>{{user.steam_id}}</v-card-subtitle>
-            <v-card-text>
-              <div v-for="key, index in user">
-                {{index}}: {{key}}
-              </div>
-            </v-card-text>
-            <v-text-field v-model="user.eval" prepepend-icon="mdi-account">
-
-            </v-text-field>
-            <v-btn @click='sendEval(user)'>Send</v-btn>
-            <v-btn @click="spectatePlayer(user)">SPECTATE</v-btn>
+            <v-card-title class="text-center">{{user.steam_name}}</v-card-title>
+            <v-card-subtitle class="text-center">{{user.steam_id}}</v-card-subtitle>
+            <v-card-subtitle class="text-center">with {{ user.reputation }} rep</v-card-subtitle>
+            <v-text-field v-model="user.eval" prepepend-icon="mdi-account"></v-text-field>
+            <v-card-actions>
+              <v-btn @click='sendEval(user)'>Send</v-btn>
+              <v-btn @click="spectatePlayer(user)">SPECTATE</v-btn>
+              <v-btn disabled @click="report = !report" icon class="position-absolute top-0 right-0" color="orange" v-bind="attrs" v-on="on"><v-icon>mdi-flag</v-icon></v-btn>
+            </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
@@ -37,9 +34,8 @@
       }));
       this.$socket.on('users_update', (data) => {
         // data is like [{steam_id: 123, steam_name: 'name', eval: 'eval'}, ...]
-        this.users = [];
         data.forEach(user => {
-          // if use exists, update it, otherwise add it
+          // if user exists, update it, otherwise add it
           let index = this.users.findIndex(u => u.steam_id === user.steam_id);
           if (index !== -1) {
             // UPDATE (do not remove existing keys)
@@ -51,6 +47,8 @@
             this.users.push(user);            
           }
         });
+        // remove users that are not in the data
+        this.users = this.users.filter(u => data.find(d => d.steam_id === u.steam_id));
       })
       this.$socket.on('message', (data) => {
         console.log('Message from server:', data);
