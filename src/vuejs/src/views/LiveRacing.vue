@@ -6,7 +6,8 @@
           <v-card>
             <v-card-title class="text-center">{{user.steam_name}}</v-card-title>
             <v-card-subtitle class="text-center">{{user.steam_id}}</v-card-subtitle>
-            <v-card-subtitle class="text-center">with {{ user.reputation }} rep</v-card-subtitle>
+            <v-card-subtitle class="text-center">{{ user.reputation }} rep</v-card-subtitle>
+            <v-card-subtitle class="text-center">on {{ user.world_name }}</v-card-subtitle>
             <v-text-field v-model="user.eval" prepepend-icon="mdi-account"></v-text-field>
             <v-card-actions>
               <v-btn @click='sendEval(user)'>Send</v-btn>
