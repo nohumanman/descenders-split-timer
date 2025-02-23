@@ -134,7 +134,7 @@ class Webserver():
         """ Function to get the replay of a time with id time_id """
         time_id = time_id.split(".")[0]
         try:
-            return await send_file("replays/" + time_id + ".replay", attachment_filename=f"{time_id}.replay")
+            return await send_file("replays/" + time_id + ".replay", as_attachment = True, attachment_filename=f"{time_id}.replay")
         except FileNotFoundError:
             return "No replay found!"
 
