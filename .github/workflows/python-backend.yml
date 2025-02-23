@@ -34,7 +34,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    # 
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -48,23 +48,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install flake8 pytest
-          if [ -f server/src/requirements.txt ]; then pip install -r server/src/requirements.txt; fi
+          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
           python -m pip install sqlfluff==2.3.5
           python -m pip install pylint
 
       - name: Run unit tests
         run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/server/src/
-          python -m unittest discover -s ./server/tests -p "*_test.py"
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src/websocket-api:$(pwd)/src/web-api
+          python -m unittest discover -s ./tests -p "*_test.py"
 
       - name: Lint python code (pylint)
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          cd server/src/
+          cd src/
           pylint *.py --exit-zero
-          cd ../tests/
+          cd tests/
           pylint *.py --exit-zero
-          cd ../..
+          cd ..
 
       - name: Lint schema.sql
         run: |
