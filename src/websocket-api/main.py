@@ -20,7 +20,6 @@ print("Starting websocket api", flush=True)
 async def start():
     # Database Management System
     dbms_url = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}"
-    print(f"Connecting to {dbms_url}")
 
     unity_socket_server = WebSocketServer(IP, SOCKET, DBMS(dbms_url))
     vuejs_socket_server = VuejsSocketServer(DBMS(dbms_url), unity_socket_server)
