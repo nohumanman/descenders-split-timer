@@ -307,10 +307,10 @@ class DBMS:
                 for all_times in times
             ]
 
-    async def get_trail_average_starting_speed(self, trail_name, world_name):
+    async def get_trail_max_starting_speed(self, trail_name, world_name):
         async with self.async_session() as session:
             result = await session.execute(
-                select(func.avg(PlayerTime.starting_speed))
+                select(func.max(PlayerTime.starting_speed))
                 .join(Trail, Trail.trail_id == PlayerTime.trail_id)
                 .where(
                     Trail.trail_name == trail_name,

@@ -198,7 +198,7 @@ class WebSocket():
         )
         for trail_name, trail in self.trails.items():
             trail.timer_info.starting_speed = starting_speed
-            average_starting_speed = await self.dbms.get_trail_average_starting_speed(
+            average_starting_speed = await self.dbms.get_trail_max_starting_speed(
                 trail_name,
                 self.info.world_name
             )
