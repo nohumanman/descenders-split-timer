@@ -36,8 +36,7 @@ class VuejsSocketServer:
     def get_total_replay_size(self):
         # get size of ./replays
         size = 0
-        os.system('du -sh ./replays')
-        with os.popen('du -sh ./replays') as p:
+        with os.popen('du -s --block-size=1G ./replays') as p:
             size = p.read().split()[0]
         return size
 
