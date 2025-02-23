@@ -129,7 +129,7 @@ class VuejsSocketServer:
                 if user is None:
                     print("SESSION NOT FOUND!")
                     return
-                if user['id'] != '437237976347705346': # TODO: Modularise this
+                if user['id'] != '437237976347705346' and user['id'] != '360866829930987521': # TODO: Modularise this
                     print("USER NOT AUTHENTICATED TO DO EVAL")
                     return
 
