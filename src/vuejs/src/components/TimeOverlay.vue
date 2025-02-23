@@ -74,7 +74,7 @@
           <v-btn disabled @click="report = !report" icon class="position-absolute top-0 right-0" color="orange" v-bind="attrs" v-on="on"><v-icon>mdi-flag</v-icon></v-btn>
           <v-btn @click="clearTime();">Close</v-btn>
           <v-spacer></v-spacer>
-          <v-btn><v-icon>mdi-download-circle</v-icon>Replay</v-btn>
+          <v-btn :href="'/api/download-replay/' + timeInfo.time_id"><v-icon>mdi-download-circle</v-icon>Replay</v-btn>
         </v-card-actions>
       </v-card>
     </v-overlay>
