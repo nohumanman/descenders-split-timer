@@ -33,7 +33,6 @@
           <v-btn target="_blank" @click="focusTime = item">
             <v-icon>mdi-open-in-new</v-icon>
           </v-btn>
-          {{ focusTime }}
         </template>
         <template v-slot:item.time="{ item }">
           {{ secs_to_str(item.time) }}
