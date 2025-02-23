@@ -30,14 +30,20 @@
           {{ new Date(item.submission_timestamp * 1000).toLocaleString() }}
         </template>
         <template v-slot:item.time_id="{ item }">
-          <v-btn target="_blank" :href="'https://modkit.nohumanman.com/time/' + item.time_id">
+          <v-btn target="_blank" @click="focusTime = item">
             <v-icon>mdi-open-in-new</v-icon>
           </v-btn>
+          {{ focusTime }}
         </template>
         <template v-slot:item.time="{ item }">
           {{ secs_to_str(item.time) }}
         </template>
+        <!-- overlay -->
+
       </v-data-table-server>
+      <template>
+        <TimeOverlay v-model:timeInfo="focusTime" />
+      </template>
     </v-container>
   </v-container>
   </template>  
@@ -89,6 +95,7 @@
       serverItems: [],
       loading: true,
       totalItems: 0,
+      focusTime: null,
     }),
     methods: {
       loadItems ({ page, itemsPerPage, sortBy }) {
