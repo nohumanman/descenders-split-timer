@@ -313,7 +313,9 @@ class DBMS:
                 .join(Trail, Trail.trail_id == PlayerTime.trail_id)
                 .where(
                     Trail.trail_name == trail_name,
-                    Trail.world_name == world_name
+                    Trail.world_name == world_name,
+                    PlayerTime.starting_speed != 0,
+                    PlayerTime.deleted.is_(False),
                 )
             )            
             speeds = result.scalars().all()
