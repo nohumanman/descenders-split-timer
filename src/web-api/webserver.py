@@ -67,6 +67,12 @@ class Webserver():
                 ['POST']
             ),
             WebserverRoute(
+                '/download-replay/<time_id>',
+                'get_replay',
+                self.get_replay,
+                ['GET']
+            ),
+            WebserverRoute(
                 '/get-total-stored-times',
                 'get_total_stored_times',
                 self.get_total_stored_times,
