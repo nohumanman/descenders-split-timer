@@ -211,18 +211,32 @@ class TrailTimer():
         was_started = self.timer_info.started
         self.timer_info.started = False
         # submit the time to the database
-        time_id = await self.network_player.dbms.submit_time(
-            self.network_player.info.steam_id,
-            self.timer_info.times,
-            self.trail_name,
-            self.network_player.info.world_name,
-            self.network_player.info.bike_id,
-            self.timer_info.starting_speed,
-            self.network_player.info.version,
-            "",
-            self.timer_info.auto_verify and can_end[0],
-            deleted=not can_end[0]
-        )
+        time_id = None
+        try:
+            time_id = await self.network_player.dbms.submit_time(
+                self.network_player.info.steam_id,
+                self.timer_info.times,
+                self.trail_name,
+                self.network_player.info.world_name,
+                self.network_player.info.bike_id,
+                self.timer_info.starting_speed,
+                self.network_player.info.version,
+                "",
+                self.timer_info.auto_verify and can_end[0],
+                deleted=not can_end[0]
+            )
+        except Exception as e:
+            # this is a critical error - need to log and notify the user
+            print("FATAL ERROR: Failed to submit time to database!", flush=True)
+            print("FATAL ERROR: ", e, flush=True)
+            await self.network_player.send_popup(
+                    "Criticial Error",
+                    (
+                        "The server has encountered a critical error and was "
+                        f"unable to submit your time. Client time: {client_time}"
+                    )
+            )
+
         # ask client to upload replay
         await self.network_player.send(f"UPLOAD_REPLAY|{time_id}")
         # if the timer has not started, return
@@ -245,17 +259,23 @@ class TrailTimer():
             except Exception as e:
                 logging.error(f"Failed to send message to twitch chat: {e}")
         asyncio.create_task(twitch_notif())
-        async def send_popup():
-            if not self.timer_info.auto_verify:
-                await asyncio.sleep(2)
-                await self.network_player.send(
-                        f"POPUP|Verification Required|Your time of {secs_str}"
-                        " can be verified if it is a legal run with no cuts."
+
+        if can_end:
+            await self.network_player.send_popup("Verification Required",
+                    (
+                        f"Your time of {secs_str} can be verified if it is a legal run with no cuts."
                         " You can ask for verification in the #request-verification"
                         " channel on the Descenders Competitive Discord server."
                         f" Please only do this if you know your run is valid. ID{time_id}"
-                )
-        asyncio.create_task(send_popup())
+                    )
+            )
+        else:
+            await self.network_player.send_popup("Verification Required",
+                    (
+                        f"Time cannot be verified due to the following reason: {can_end[1]}."
+                        " You cannot ask us to verify this run."
+                    )
+            )
         if can_end[0]:
             await self.network_player.send(
                 f"TIMER_FINISH|{secs_str}\\n{comment}"
