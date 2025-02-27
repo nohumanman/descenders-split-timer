@@ -26,6 +26,10 @@
           <v-icon v-if="item.verified" color="success">mdi-check</v-icon>
           <v-icon v-else color="error">mdi-close</v-icon>
         </template>
+        <template v-slot:item.deleted="{ item }">
+          <v-icon v-if="item.deleted" color="success">mdi-check</v-icon>
+          <v-icon v-else color="error">mdi-close</v-icon>
+        </template>
         <template v-slot:item.submission_timestamp="{ item }">
           {{ new Date(item.submission_timestamp * 1000).toLocaleString() }}
         </template>
@@ -83,6 +87,7 @@
       headers: [
         { title: 'Player Name', key: 'name', align: 'start', },
         { title: 'Bike Type', key: 'bike', align: 'end' },
+        { title: 'Deleted', key: 'deleted', align: 'end' },
         { title: 'Verified', key: 'verified', align: 'end' },
         { title: 'Modkit Version', key: 'version', align: 'end' },
         //{ title: 'Game Version', key: 'game_version', align: 'end' },
