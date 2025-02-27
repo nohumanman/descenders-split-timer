@@ -238,6 +238,10 @@ class WebSocket():
             ]
         )
 
+    async def send_popup(self, title, description):
+        """ Send a popup message to a player. """
+        await self.send(f"POPUP|{title}|{description}")
+
     async def get_speedrun_dot_com_leaderboard(self, trail_name):
         """ Retrieve the leaderboard data for a specific trail from Speedrun.com """
         api = srcomapi.SpeedrunCom()
