@@ -4,6 +4,7 @@ import dataclasses
 import time
 import logging
 import asyncio
+import os
 import nest_asyncio # Used to fix RuntimeError in using async from thread
 from twitch_chat_irc import twitch_chat_irc
 from tokens import TWITCH_TOKEN
@@ -203,6 +204,19 @@ class TrailTimer():
                 return (False, error_message)
         return (True, "No errors")
 
+    async def request_replay(self, time_id):
+        """ Request the replay from the client. """
+        # send the replay request to the client
+        await self.network_player.send(f"UPLOAD_REPLAY|{time_id}")
+        # check if the replay was uploaded
+        asyncio.sleep(20)
+        # ./replays/{time_id}.replay
+        replay_path = f"./replays/{time_id}.replay"
+        if not os.path.exists(replay_path):
+            # if the replay was not uploaded, invalidate the time
+            print("Replay was not uploaded! Deleting time.", flush=True)
+            await self.network_player.dbms.delete_time(time_id)
+
     async def end_timer(self, client_time: float):
         """ End the timer. """
         self.timer_info.times.append(float(client_time)) # add the final time
@@ -238,7 +252,7 @@ class TrailTimer():
             )
 
         # ask client to upload replay
-        await self.network_player.send(f"UPLOAD_REPLAY|{time_id}")
+        asyncio.create_task(self.request_replay(time_id))
         # if the timer has not started, return
         # this is to prevent the timer from ending multiple times, but retain
         # all times in the database. Important for live racing
