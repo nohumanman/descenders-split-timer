@@ -188,7 +188,6 @@ namespace ModLoaderSolution
         {
 			Utilities.LogMethodCallStart();
 			Byte[] bytes = System.IO.File.ReadAllBytes(replay);
-			System.IO.File.Delete(replay);
 
 			WWWForm form = new WWWForm();
 			form.AddField("time_id", time_id);
@@ -203,11 +202,13 @@ namespace ModLoaderSolution
 
 				if (www.isNetworkError || www.isHttpError)
 				{
-					Utilities.Log(www.error);
+					// give it another go
+					UploadReplay(replay, time_id);
 				}
 				else
 				{
 					Utilities.Log("Upload complete!");
+					File.Delete(replay);
 				}
 			}
 			Utilities.LogMethodCallEnd();
@@ -265,10 +266,10 @@ namespace ModLoaderSolution
 			if (message.StartsWith("UPLOAD_REPLAY"))
             {
 				string time_id = message.Split('|')[1];
-				Utilities.instance.SaveReplayToFile("TEMP");
+				Utilities.instance.SaveReplayToFile(time_id);
 				string replayLocation = (
 					Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-					+ "Low\\RageSquid\\Descenders\\Replays\\TEMP.replay"
+					+ "Low\\RageSquid\\Descenders\\Replays\\" + time_id + ".replay"
 				);
 				StartCoroutine(UploadReplay(replayLocation, time_id));
 			}
