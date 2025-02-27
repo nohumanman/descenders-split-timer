@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './views/Home.vue';
 import Leaderboard from './views/Leaderboard.vue';
 import LiveRacing from './views/LiveRacing.vue';
+import LiveRacingTag from './Views/LiveRacingTag.vue';
 import TimeDatabase from './views/TimeDatabase.vue';
 import Callback from './views/Callback.vue'
 
@@ -10,7 +11,8 @@ const routes = [
   { path: '/leaderboard', name: 'Leaderboard', component: Leaderboard, inHomeBar: true },
   { path: '/time-database', name: 'Time Database', component: TimeDatabase, inHomeBar: true },
   { path: '/live-racing', name: 'Live Racing', component: LiveRacing, inHomeBar: true },
-  { path: '/callback', name: 'Callback', component: Callback, inHomeBar: false}
+  { path: '/callback', name: 'Callback', component: Callback, inHomeBar: false},
+  {path: '/live-racing/spectated-player/', name: 'Spectated Player', component: LiveRacingTag, inHomeBar: false}
 ];
 
 const router = createRouter({
@@ -23,7 +25,7 @@ const token = localStorage.getItem("discord_token");
 const REDIRECT_URI = encodeURIComponent("https://modkitv2.nohumanman.com/callback");
 router.beforeEach((to, from, next) => {
   if (to.path === '/live-racing' && !token) {
-    window.location.href = `https://discord.com/api/oauth2/authorize?client_id=973689949020880926&redirect_uri=${REDIRECT_URI}&response_type=token&scope=identify`;
+    next();//window.location.href = `https://discord.com/api/oauth2/authorize?client_id=973689949020880926&redirect_uri=${REDIRECT_URI}&response_type=token&scope=identify`;
   } else {
     next();
   }

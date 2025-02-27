@@ -2,10 +2,9 @@
   <v-app>
     
     <!-- Footer -->
-    <AppFooter />
+    <AppFooter v-if="$route.path != '/live-racing/spectated-player'" />
     <!-- App Bar -->
-    <TopNavigation />
-    
+    <TopNavigation v-if="$route.path != '/live-racing/spectated-player'" />
 
     <!-- Main Content -->
     <v-main>
