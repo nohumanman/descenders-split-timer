@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './views/Home.vue';
 import Leaderboard from './views/Leaderboard.vue';
 import LiveRacing from './views/LiveRacing.vue';
-import LiveRacingTag from './Views/LiveRacingTag.vue';
+import LiveRacingTag from './views/LiveRacingTag.vue';
 import TimeDatabase from './views/TimeDatabase.vue';
 import Callback from './views/Callback.vue'
 
