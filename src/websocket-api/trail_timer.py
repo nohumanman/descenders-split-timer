@@ -260,7 +260,7 @@ class TrailTimer():
                 logging.error(f"Failed to send message to twitch chat: {e}")
         asyncio.create_task(twitch_notif())
 
-        if can_end:
+        if can_end[0]:
             await self.network_player.send_popup("Verification Required",
                     (
                         f"Your time of {secs_str} can be verified if it is a legal run with no cuts."
