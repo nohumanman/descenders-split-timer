@@ -106,7 +106,9 @@ class VuejsSocketServer:
                 "last_trick": player.info.last_trick,
                 "time_started": player.info.time_started,
                 "trails": str([{player.trails[trail].trail_name} for trail in player.trails]),
-                "version": player.info.version
+                "version": player.info.version,
+                "spectating": player.info.spectating,
+                "spectating_id": player.info.spectating_id,
             } for player in self.web_socket.players]
             await self.sio.emit('users_update', users, room=sid)
         try:
