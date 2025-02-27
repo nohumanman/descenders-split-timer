@@ -10,7 +10,7 @@ from tokens import TWITCH_TOKEN
 nest_asyncio.apply()
 
 if TYPE_CHECKING: # for imports with intellisense
-    from unity_socket import UnitySocket
+    from websocket import WebSocket
 
 @dataclasses.dataclass
 class TimerInfo:
@@ -26,7 +26,7 @@ class TrailTimer():
     """ Used to track the time on a trail """
     def __init__(self, trail_name, network_player):
         self.trail_name = trail_name
-        self.network_player : UnitySocket = network_player
+        self.network_player : WebSocket = network_player
         self.timer_info = TimerInfo(
             started=False, auto_verify=True, times=[], starting_speed=0,
             total_checkpoints=0, time_started=0
