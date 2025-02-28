@@ -213,9 +213,8 @@ class TrailTimer():
         # ./replays/{time_id}.replay
         replay_path = f"./replays/{time_id}.replay"
         if not os.path.exists(replay_path):
-            # if the replay was not uploaded, invalidate the time
-            print("Replay was not uploaded! Deleting time.", flush=True)
-            await self.network_player.dbms.delete_time(time_id)
+            # if the replay was not uploaded, we need to request the replay again
+            await self.request_replay(time_id)
 
     async def end_timer(self, client_time: float):
         """ End the timer. """
