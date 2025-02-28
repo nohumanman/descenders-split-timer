@@ -109,7 +109,12 @@ class VuejsSocketServer:
                 "world_name": player.info.world_name,
                 "last_trick": player.info.last_trick,
                 "time_started": player.info.time_started,
-                "trails": str([{player.trails[trail].trail_name} for trail in player.trails]),
+                "trails": str([{
+                    "trail_name": player.trails[trail].trail_name,
+                    "started": player.trails[trail].timer_info.started,
+                    "time_started": player.trails[trail].timer_info.time_started,
+                    "times": player.trails[trail].timer_info.times,
+                } for trail in player.trails]),
                 "version": player.info.version,
                 "spectating": player.info.spectating,
                 "spectating_id": player.info.spectating_id,
@@ -133,12 +138,12 @@ class VuejsSocketServer:
             elif data['type'] == 'eval':
                 session = await self.sio.get_session(sid)
                 user = session.get("user") if session else None
-                if user is None:
-                    print("SESSION NOT FOUND!")
-                    return
-                if user['id'] != '437237976347705346' and user['id'] != '360866829930987521': # TODO: Modularise this
-                    print("USER NOT AUTHENTICATED TO DO EVAL")
-                    return
+                #if user is None:
+                #    print("SESSION NOT FOUND!")
+                #    return
+                #if user['id'] != '437237976347705346' and user['id'] != '360866829930987521': # TODO: Modularise this
+                #    print("USER NOT AUTHENTICATED TO DO EVAL")
+                #    return
 
                 steam_id = data['data']['steam_id']
                 # This is a security risk, but it's just for testing
