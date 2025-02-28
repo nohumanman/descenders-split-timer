@@ -1,8 +1,7 @@
 <template>
     <Beta />
     <v-container justify="center">
-  <v-card
-        v-if="timeInfo != null">
+    <v-card v-if="timeInfo != null">
         <v-card-title class="text-center">
             <h2>{{ secs_to_str(timeInfo.time) }}</h2>
             <h3>{{ timeInfo.name }}</h3>
@@ -101,12 +100,12 @@
         <v-card-title class="text-center">Report Issue</v-card-title>
         <v-card-text>
           <v-form>
-            <v-text-field
-              v-model="reportDetails"
-              label="Details"
-              type="text"
+            <v-select
+              v-model="reportType"
+              :items="['No Replay', 'Cheating', 'Invalid Time', 'Innapropriate Username']"
+              label="Type"
               required
-            ></v-text-field>
+            ></v-select>
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -161,6 +160,10 @@
                     fraction = "0" + fraction
                 return d_mins + ":" + d_secs + "." + fraction
             },
+            submitReport(){
+                this.$socket.emit("message", {"type": "report", "identifier": "time", "data": {"time_id": this.timeInfo.time_id, "report_type": this.reportType}});
+                this.report = false;
+            }
         }
     }
 </script>
