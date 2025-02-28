@@ -5,6 +5,7 @@ import LiveRacing from './views/LiveRacing.vue';
 import LiveRacingTag from './views/LiveRacingTag.vue';
 import TimeDatabase from './views/TimeDatabase.vue';
 import Callback from './views/Callback.vue'
+import Time from './views/Time.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: Home, inHomeBar: false },
@@ -12,7 +13,8 @@ const routes = [
   { path: '/time-database', name: 'Time Database', component: TimeDatabase, inHomeBar: true },
   { path: '/live-racing', name: 'Live Racing', component: LiveRacing, inHomeBar: true },
   { path: '/callback', name: 'Callback', component: Callback, inHomeBar: false},
-  {path: '/live-racing/spectated-player/', name: 'Spectated Player', component: LiveRacingTag, inHomeBar: false}
+  { path: '/live-racing/spectated-player/', name: 'Spectated Player', component: LiveRacingTag, inHomeBar: false},
+  { path: '/time/:time_id', name: 'Time', component: Time, inHomeBar: false }
 ];
 
 const router = createRouter({
