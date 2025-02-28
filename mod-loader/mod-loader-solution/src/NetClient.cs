@@ -208,7 +208,6 @@ namespace ModLoaderSolution
 				else
 				{
 					Utilities.Log("Upload complete!");
-					File.Delete(replay);
 				}
 			}
 			Utilities.LogMethodCallEnd();
@@ -266,12 +265,17 @@ namespace ModLoaderSolution
 			if (message.StartsWith("UPLOAD_REPLAY"))
             {
 				string time_id = message.Split('|')[1];
-				Utilities.instance.SaveReplayToFile(time_id);
+
 				string replayLocation = (
-					Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-					+ "Low\\RageSquid\\Descenders\\Replays\\" + time_id + ".replay"
-				);
-				StartCoroutine(UploadReplay(replayLocation, time_id));
+					Application.persistentDataPath + "/Replays/"
+					 + time_id + ".replay"
+                );
+				if (!File.Exists(replayLocation)){
+                    // if replay doesn't exist then save it
+                    Utilities.instance.SaveReplayToFile(time_id);
+                }
+				// upload replay
+                StartCoroutine(UploadReplay(replayLocation, time_id));
 			}
 			if (message.StartsWith("GET_POS"))
             {
