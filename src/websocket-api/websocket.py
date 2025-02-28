@@ -66,6 +66,8 @@ operations = {
         lambda netPlayer, data: netPlayer.log_line(str(data[0:])),
     "SPECTATE":
         lambda netPlayer, data: netPlayer.set_spectating(data[0]),
+    "LOG_TO_PRINT":
+        lambda netPlayer, data: print(data[0]),
 }
 
 

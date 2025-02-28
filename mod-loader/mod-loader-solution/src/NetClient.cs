@@ -25,7 +25,7 @@ namespace ModLoaderSolution
 		List<string> messages = new List<string>();
 		public int port = 65433;
 		public string ip = "86.26.185.112";
-		static string version = "0.4.00";
+		static string version = "0.4.01";
 		static bool quietUpdate = false;
 		static string patchNotes = "You are now using Modkit V2. This is the first stable release of the modkit. If you have any problems, please report them ASAP.\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
@@ -202,8 +202,11 @@ namespace ModLoaderSolution
 
 				if (www.isNetworkError || www.isHttpError)
 				{
-					// give it another go
-					UploadReplay(replay, time_id);
+                    // critical error
+                    Utilities.instance.PopUp("Critical Error", "Replay upload has failed - UploadReplay function has failed!");
+                    SendData("LOG_TO_PRINT", "Critical Error, UploadReplay function failed replay:" + replay + ", time_id " + time_id);
+                    // give it another go
+                    UploadReplay(replay, time_id);
 				}
 				else
 				{
@@ -273,6 +276,12 @@ namespace ModLoaderSolution
 				if (!File.Exists(replayLocation)){
                     // if replay doesn't exist then save it
                     Utilities.instance.SaveReplayToFile(time_id);
+					if (!File.Exists(replayLocation))
+					{
+						// critical error
+						Utilities.instance.PopUp("Critical Error", "Replay failed to save, please report this in the Descenders Competitive server with your output-log.txt!");
+						SendData("LOG_TO_PRINT", "Critical Error, replay failed to save in '" + replayLocation + "'");
+					}
                 }
 				// upload replay
                 StartCoroutine(UploadReplay(replayLocation, time_id));
