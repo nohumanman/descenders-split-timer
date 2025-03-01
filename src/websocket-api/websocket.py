@@ -128,6 +128,10 @@ class WebSocket():
         # Save the replay file to the server
         replay_path = os.path.join(script_path, "replays", f"{time_id}.replay")
         os.makedirs(os.path.dirname(replay_path), exist_ok=True)
+        # Add padding to the base64 string if necessary
+        missing_padding = len(base64_replay) % 4
+        if missing_padding:
+            base64_replay += '=' * (4 - missing_padding)
         with open(replay_path, "wb") as replay_file:
             replay_file.write(base64.b64decode(base64_replay))
         logging.info(
