@@ -25,7 +25,7 @@ namespace ModLoaderSolution
 		List<string> messages = new List<string>();
 		public int port = 65433;
 		public string ip = "86.26.185.112";
-		static string version = "0.4.01";
+		static string version = "0.4.02";
 		static bool quietUpdate = false;
 		static string patchNotes = "You are now using Modkit V2. This is the first stable release of the modkit. If you have any problems, please report them ASAP.\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
