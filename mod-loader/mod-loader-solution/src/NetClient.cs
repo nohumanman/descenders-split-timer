@@ -206,7 +206,7 @@ namespace ModLoaderSolution
                     Utilities.instance.PopUp("Critical Error", "Replay upload has failed - UploadReplay function has failed!");
                     SendData("LOG_TO_PRINT", "Critical Error, UploadReplay function failed replay:" + replay + ", time_id " + time_id);
                     // give it another go
-                    UploadReplay(replay, time_id);
+                    StartCoroutine(UploadReplay(replay, time_id));
 				}
 				else
 				{
@@ -215,33 +215,47 @@ namespace ModLoaderSolution
 			}
 			Utilities.LogMethodCallEnd();
 		}
-		private void ListenForData() {
-			Utilities.LogMethodCallStart();
-			try {
-				Utilities.Log("Creating TcpClient()");
-				socketConnection = new TcpClient(ip, port);
-				Utilities.Log("TcpClient created!");
-				Byte[] bytes = new Byte[1024];
-				while (true) {
-					using (NetworkStream stream = socketConnection.GetStream()) { 					
-						int length; 								
-						while ((length = stream.Read(bytes, 0, bytes.Length)) != 0) { 						
-							var incommingData = new byte[length]; 						
-							Array.Copy(bytes, 0, incommingData, 0, length); 						
-							string serverMessage = Encoding.ASCII.GetString(incommingData);
-							string[] serverMessages = serverMessage.Split('\n');
-							foreach(string message in serverMessages)
-								messages.Add(message);
-						}
-					}
-				}
-			}
-			catch {             
-				Utilities.Log("Socket exception in ListenForData()");         
-			}
-			Utilities.LogMethodCallEnd();
-		}
-		public void NetStart()
+        private void ListenForData()
+        {
+            try
+            {
+                Utilities.Log("Creating TcpClient()");
+                socketConnection = new TcpClient(ip, port);
+                Utilities.Log("TcpClient created!");
+                Byte[] bytes = new Byte[1024];
+                StringBuilder dataBuffer = new StringBuilder();
+
+                using (NetworkStream stream = socketConnection.GetStream())
+                {
+                    int length;
+                    while ((length = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    {
+                        string receivedData = Encoding.ASCII.GetString(bytes, 0, length);
+                        dataBuffer.Append(receivedData);
+
+                        // Process complete messages
+                        while (true)
+                        {
+                            int newlineIndex = dataBuffer.ToString().IndexOf('\n');
+                            if (newlineIndex == -1)
+                                break; // No complete message yet, wait for more data
+
+                            string completeMessage = dataBuffer.ToString(0, newlineIndex);
+                            messages.Add(completeMessage);
+
+                            // Remove processed message from buffer
+                            dataBuffer.Remove(0, newlineIndex + 1);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                Utilities.Log("Socket exception in ListenForData()");
+            }
+        }
+
+        public void NetStart()
         {
 			Utilities.LogMethodCallStart();
 			PlayerManagement.Instance.NetStart();
