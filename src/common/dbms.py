@@ -228,7 +228,7 @@ class DBMS:
                 "name": (await session.get(Player, time.steam_id)).steam_name,
                 "bike": time.bike_id,
                 "version": time.version,
-                "time_id": time.player_time_id,
+                "time_id": str(time.player_time_id),
                 "submission_timestamp": time.submission_timestamp,
                 "time": time.final_time,
                 "verified": time.verified,
