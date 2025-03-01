@@ -2,11 +2,18 @@
     <v-container fluid class="fill-height">
       <v-row align="center" justify="center">
         <v-col cols="auto">
-          <h1 class="text-h3">{{secs_to_str(user_time)}}</h1>
+          <h1 class="text-h3 tag-format">{{secs_to_str(user_time)}}</h1>
         </v-col>
       </v-row>
     </v-container>
   </template>
+
+  <style>
+  .tag-format{
+    font-size: 20px;
+    font-weight: bold;
+  }
+  </style>
 
   <script>
     export default {
