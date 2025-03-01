@@ -50,10 +50,16 @@ class WebSocketServer():
         try:
             while player.alive:
                 # Read the data from the client
-                data = await asyncio.wait_for(
-                    reader.readuntil(b'\n'),
-                    timeout=self.timeout
-                )
+                try:
+                    data = await asyncio.wait_for(
+                        reader.readuntil(b'\n'),
+                        timeout=self.timeout
+                    )
+                except asyncio.LimitOverrunError:
+                    data = await asyncio.wait_for(
+                        reader.read(self.read_buffer_size),
+                        timeout=self.timeout
+                    )
                 # If no data is received, then the client has disconnected
                 if not data:
                     raise DisconnectError("Client disconnected")
