@@ -25,7 +25,7 @@ namespace ModLoaderSolution
 		List<string> messages = new List<string>();
 		public int port = 65433;
 		public string ip = "86.26.185.112";
-		static string version = "0.4.04";
+		static string version = "0.4.05";
 		static bool quietUpdate = false;
 		static string patchNotes = "This version contains a hotfix for replays failing to upload. Some previous times may not be verifiable due to this error. Hopefully this bug is resolved.\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
@@ -186,13 +186,11 @@ namespace ModLoaderSolution
 		}
 		public void UploadReplay(string replay, string time_id)
 		{
-			Utilities.LogMethodCallStart();
 			Byte[] bytes = System.IO.File.ReadAllBytes(replay);
 			string base64Replay = Convert.ToBase64String(bytes);
 
-			string message = $"UPLOAD_REPLAY|{time_id}|{base64Replay}";
-			SendData(message);
-			Utilities.LogMethodCallEnd();
+			string message = $"UPLOAD_REPLAY|{time_id}|{base64Replay}\n";
+			_SendData(message);
 		}
         private void ListenForData()
         {
