@@ -11,6 +11,7 @@ import requests
 import json
 import srcomapi
 import hashlib
+import base64
 import srcomapi.datatypes as dt
 import discord
 from trail_timer import TrailTimer
@@ -117,6 +118,22 @@ class WebSocket():
 
     def __str__(self):
         return f"{self.info.steam_name} {self.info.steam_id} on {self.addr}"
+
+    async def upload_replay(self, time_id: str, base64_replay: str):
+        """ Handle the upload of a replay file """
+        logging.info(
+            "%s '%s'\t- uploading replay for time_id %s",
+            self.info.steam_id, self.info.steam_name, time_id
+        )
+        # Save the replay file to the server
+        replay_path = os.path.join(script_path, "replays", f"{time_id}.replay")
+        os.makedirs(os.path.dirname(replay_path), exist_ok=True)
+        with open(replay_path, "wb") as replay_file:
+            replay_file.write(base64.b64decode(base64_replay))
+        logging.info(
+            "%s '%s'\t- replay uploaded successfully",
+            self.info.steam_id, self.info.steam_name
+        )
 
     async def send_leaderboard(self, trail_name: str):
         """ Send the leaderboard data for a specific trail to the descenders unity client """

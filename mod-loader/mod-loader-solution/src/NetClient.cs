@@ -25,9 +25,9 @@ namespace ModLoaderSolution
 		List<string> messages = new List<string>();
 		public int port = 65433;
 		public string ip = "86.26.185.112";
-		static string version = "0.4.02";
+		static string version = "0.4.04";
 		static bool quietUpdate = false;
-		static string patchNotes = "You are now using Modkit V2. This is the first stable release of the modkit. If you have any problems, please report them ASAP.\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
+		static string patchNotes = "This version contains a hotfix for replays failing to upload. Some previous times may not be verifiable due to this error. Hopefully this bug is resolved.\n\n\nYours,\n- nohumanman"; // that which has changed since the last version.
 		public static DebugType debugState = DebugType.RELEASE;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeAnalysis", "IDE0051:Unused member", Justification = "Called by Unity DI")]
         void Awake(){
@@ -184,35 +184,14 @@ namespace ModLoaderSolution
 			}
 			Utilities.LogMethodCallEnd();
 		}
-		public IEnumerator UploadReplay(string replay, string time_id)
-        {
+		public void UploadReplay(string replay, string time_id)
+		{
 			Utilities.LogMethodCallStart();
 			Byte[] bytes = System.IO.File.ReadAllBytes(replay);
+			string base64Replay = Convert.ToBase64String(bytes);
 
-			WWWForm form = new WWWForm();
-			form.AddField("time_id", time_id);
-			form.AddBinaryData("replay", bytes, "replay");
-
-			using (UnityWebRequest www = UnityWebRequest.Post(
-				"https://modkitv2.nohumanman.com/api/upload-replay",
-				form
-			))
-			{
-				yield return www.SendWebRequest();
-
-				if (www.isNetworkError || www.isHttpError)
-				{
-                    // critical error
-                    Utilities.instance.PopUp("Critical Error", "Replay upload has failed - UploadReplay function has failed!");
-                    SendData("LOG_TO_PRINT", "Critical Error, UploadReplay function failed replay:" + replay + ", time_id " + time_id);
-                    // give it another go
-                    StartCoroutine(UploadReplay(replay, time_id));
-				}
-				else
-				{
-					Utilities.Log("Upload complete!");
-				}
-			}
+			string message = $"UPLOAD_REPLAY|{time_id}|{base64Replay}";
+			SendData(message);
 			Utilities.LogMethodCallEnd();
 		}
         private void ListenForData()
@@ -298,7 +277,7 @@ namespace ModLoaderSolution
 					}
                 }
 				// upload replay
-                StartCoroutine(UploadReplay(replayLocation, time_id));
+                UploadReplay(replayLocation, time_id);
 			}
 			if (message.StartsWith("GET_POS"))
             {

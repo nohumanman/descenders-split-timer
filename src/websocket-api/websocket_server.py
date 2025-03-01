@@ -70,7 +70,12 @@ class WebSocketServer():
                 # if the message is a heartbeat, then ignore it
                 if message == "HEARTBEAT|":
                     continue
-                asyncio.create_task(player.handle_data(message))
+                # Handle UPLOAD_REPLAY operation
+                if message.startswith("UPLOAD_REPLAY|"):
+                    _, time_id, base64_replay = message.split("|", 2)
+                    await player.upload_replay(time_id, base64_replay)
+                else:
+                    asyncio.create_task(player.handle_data(message))
         except (asyncio.TimeoutError, ConnectionResetError, BrokenPipeError, DisconnectError):
             print(f"Player {player} disconnected")
         finally:
