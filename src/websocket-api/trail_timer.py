@@ -271,7 +271,8 @@ class TrailTimer():
                     connection = twitch_chat_irc.TwitchChatIRC('nohumanman', TWITCH_TOKEN)
                     connection.send("bbb171", f"{secs_str} 🚴‍♂️💨") # change to send to self.network_player.info.twitch_channel
                     # this should serve as a log of times
-                    time_url = f"https://modkit.nohumanman.com/time/{time_id}"
+                    time_url = f"https://modkitv2.nohumanman.com/time/{time_id}"
+                    connection.send("bbb171", f"{time_url}")
             except Exception as e:
                 logging.error(f"Failed to send message to twitch chat: {e}")
         asyncio.create_task(twitch_notif())
